@@ -1,5 +1,7 @@
-const { XrayReactPlugin } = require('./lib/plugins');
+export {
+  XrayReactWebpackPlugin,
+  xrayReactVitePlugin
+} from './lib/plugins/index.js';
 
-module.exports = {
-  XrayReactPlugin
-};
+// Legacy export for backward compatibility
+export { XrayReactWebpackPlugin as XrayReactPlugin } from './lib/plugins/index.js';

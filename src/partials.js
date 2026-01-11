@@ -1,7 +1,7 @@
-const css = require('./css');
+import css from './css.js';
 
-const styleTag = `<style class="xray-react-style-tag">${css}</style>`;
-const actionBar = `
+export const styleTag = `<style class="xray-react-style-tag">${css}</style>`;
+export const actionBar = `
   <div class="xray-react-action-bar">
     <div class="xray-react-actions-wrapper">
       <input id="search-component" type="text" placeholder="Search component by name..."/>
@@ -9,8 +9,3 @@ const actionBar = `
     </div>
   </div>
 `;
-
-module.exports = {
-  styleTag,
-  actionBar
-};

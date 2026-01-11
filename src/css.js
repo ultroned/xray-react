@@ -1,4 +1,4 @@
-module.exports = `
+export default `
   .xray-react-enabled {
     margin-bottom: 50px !important;
   }
@@ -60,36 +60,105 @@ module.exports = `
     z-index: 99999 !important;
   }
   .xray-react-action-bar {
+    align-items: center;
     background-color: darkblue;
     bottom: 0;
-    height: 50px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    max-height: 100px;
+    min-height: 50px;
+    overflow-y: auto;
     padding: 0 10px;
     position: fixed;
     width: 100vw;
     z-index: 999999;
+  }
+  .xray-react-action-bar::-webkit-scrollbar {
+    width: 8px;
+  }
+  .xray-react-action-bar::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.1);
+  }
+  .xray-react-action-bar::-webkit-scrollbar-thumb {
+    background: cyan;
+    border-radius: 4px;
+  }
+  .xray-react-action-bar::-webkit-scrollbar-thumb:hover {
+    background: #00ffff;
   }
   .xray-react-actions-wrapper {
     align-items: center;
     display: flex;
     font-family: "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     font-style: normal;
-    height: inherit;
-    max-width: 1200px;
+    min-height: 50px;
+    padding: 5px 0;
+    position: sticky;
+    top: 0;
+    width: 100%;
   }
   #search-component {
+    align-self: center;
     background-color: lightgray;
     border-radius: 3px;
     border: 0;
+    flex-shrink: 0;
     font-size: 14px;
-    margin-right: 10px;
+    height: 30px;
+    line-height: 20px;
+    margin-right: 15px;
+    min-width: 200px;
     outline: 0;
     padding: 5px 10px;
-    width: 50%;
+    width: 25%;
   }
   .components-path {
     color: cyan;
-    font-size: 12px;
-    margin-left: 10px;
-    width: 50%;
+    flex: 1;
+    font-size: 11px;
+    line-height: 1.4;
+    min-width: 0;
+    overflow-x: auto;
+    overflow-y: visible;
+    white-space: nowrap;
+    word-break: keep-all;
+  }
+  .components-path::-webkit-scrollbar {
+    height: 4px;
+  }
+  .components-path::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.1);
+  }
+  .components-path::-webkit-scrollbar-thumb {
+    background: cyan;
+    border-radius: 2px;
+  }
+  .components-path::-webkit-scrollbar-thumb:hover {
+    background: #00ffff;
+  }
+  .xray-react-element-temp {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+  .xray-react-element-temp::before {
+    display: none !important;
+  }
+  .xray-react-element-temp::after {
+    display: none !important;
+  }
+  .xray-react-spinner {
+    width: 50px;
+    height: 50px;
+    border: 4px solid rgba(0, 255, 255, 0.3);
+    border-top-color: cyan;
+    border-radius: 50%;
+    animation: xray-react-spin 1s linear infinite;
+    position: relative;
+    z-index: 1;
+  }
+  @keyframes xray-react-spin {
+    to { transform: rotate(360deg); }
   }
 `;

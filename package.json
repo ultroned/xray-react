@@ -1,27 +1,49 @@
 {
   "name": "xray-react",
-  "version": "0.5.0",
+  "version": "1.0.0",
   "description": "React layout debugger inspired by Xray-rails.",
   "main": "index.js",
+  "type": "module",
+  "exports": {
+    ".": {
+      "require": "./index.js",
+      "import": "./index.js"
+    },
+    "./lib/xray-react-ui": "./lib/xray-react-ui.js",
+    "./lib/xray-react-client": "./lib/xray-react-client.js"
+  },
   "scripts": {
     "dev": "node index.js",
     "build": "rollup -c",
-    "prepublish": "rollup -c"
+    "prepublish": "rollup -c",
+    "server": "node server.js"
   },
   "engines": {
-    "node": ">=6.0.0"
+    "node": ">=22.0.0"
   },
   "keywords": [
+    "component-inspector",
+    "css",
+    "debug",
+    "debugging",
+    "development",
+    "development-tool",
+    "devtools",
+    "inspector",
+    "layout",
+    "nextjs",
     "react",
     "react-component",
-    "ui",
-    "x-ray",
-    "inspector",
-    "development",
+    "react-inspector",
+    "reactjs",
     "style",
-    "css",
-    "layout",
-    "debug"
+    "typescript",
+    "ui",
+    "vite",
+    "vite-plugin",
+    "webpack",
+    "webpack-plugin",
+    "x-ray"
   ],
   "repository": {
     "type": "git",
@@ -33,15 +55,15 @@
     "url": "https://github.com/loogle18/xray-react/issues"
   },
   "homepage": "https://github.com/loogle18/xray-react#readme",
+  "peerDependencies": {
+    "react": ">=18.0.0"
+  },
   "devDependencies": {
-    "babel-core": "^6.26.0",
-    "babel-plugin-transform-class-properties": "^6.24.1",
-    "babel-preset-stage-0": "^6.24.1",
-    "react": "^16.8.6",
-    "rollup": "^0.59.4",
-    "rollup-plugin-commonjs": "^8.3.0"
+    "@rollup/plugin-commonjs": "^28.0.1",
+    "@rollup/plugin-node-resolve": "^15.3.0",
+    "rollup": "^4.22.0"
   },
   "dependencies": {
-    "socket.io": "^2.1.1"
+    "socket.io": "^4.8.1"
   }
 }
