@@ -1,12 +1,23 @@
-# X-Ray React
+![Banner](media/banner.png)
 
-React layout debugger inspired by [Xray-rails](https://github.com/brentd/xray-rails)
+X-Ray React
+==========
+
+[![npm version](https://badge.fury.io/js/xray-react.svg)](https://www.npmjs.com/package/xray-react)
+
+React UI layout debugging tool inspired by [Xray-rails](https://github.com/brentd/xray-rails)
 
 ## Overview
 
 Xray-react is a development tool that reveals your React UI's component structure. Press **Cmd+Shift+X** (Mac) or **Ctrl+Shift+X** (Windows/Linux) to reveal an overlay of the React components that rendered your UI, and click any component to open its source file in your editor.
 
 ![Example](media/example.gif)
+<details>
+  <summary>Real-world example</summary>
+  <p>
+    <img src="media/example-complex.gif" alt="Real-world example" />
+  </p>
+</details>
 
 ## Features
 
@@ -275,18 +286,17 @@ You can also specify a custom editor using the `XRAY_REACT_EDITOR` environment v
 
 ## Development
 
+### Basic Commands
+
 ```bash
 # Install dependencies
 npm install
 
-# Build
+# Build the package
 npm run build
 
 # Run standalone server (for testing)
 npm run server
-
-# Development
-npm run dev
 ```
 
 ### Local Development Setup
@@ -313,6 +323,12 @@ To test xray-react locally with another React project:
    # In xray-react directory
    npm run build
    ```
+
+   **Note:** The standalone server reads source files directly, so no rebuild is needed for server changes.
+
+   **Note:** Rebuild is only needed if:
+   - You're using webpack/vite plugins (they inject built files from `build/` directory)
+   - You've made changes to UI or client code (`lib/xray-react-ui.js` or `lib/xray-react-client.js`)
 
 ## Contributing
 
