@@ -8,6 +8,10 @@ let projectRoot = null;
 let usageMap = {};
 let importMap = {};
 let projectFilePaths = new Set();
+let normalizedProjectFilePaths = new Set();           // Pre-normalized paths for O(1) lookup
+let componentNameToFilesIndex = new Map();            // componentName -> Set<filePath> for O(1) lookup
+const normalizePathCache = new Map();                 // Memoization cache for normalizePath
+
 const EXTERNAL_PATTERNS = [
   /node_modules/i,
   /\.next[\/\\]/i,
@@ -21,19 +25,27 @@ const EXTERNAL_PATTERNS = [
 /**
  * Normalizes a file path for comparison
  * Handles both Unix and Windows paths, relative and absolute
+ * Uses memoization cache for repeated calls with same path
  * @param {string} filePath - File path to normalize
  * @returns {string} Normalized path
  */
 const normalizePath = (filePath) => {
   if (!filePath) return '';
   
+  // Check cache first for O(1) lookup on repeated calls
+  const cached = normalizePathCache.get(filePath);
+  if (cached !== undefined) return cached;
+  
   // Convert to string and normalize separators
   let normalized = String(filePath).replace(/\\/g, '/');
   
   // Remove leading/trailing slashes for comparison
   normalized = normalized.replace(/^\/+|\/+$/g, '');
+  normalized = normalized.toLowerCase();
   
-  return normalized.toLowerCase();
+  // Cache the result
+  normalizePathCache.set(filePath, normalized);
+  return normalized;
 };
 
 /**
@@ -260,31 +272,9 @@ const isProjectComponent = (fiber, projectRootPath, componentName = null) => {
   
   if (componentName) {
     const normalizedComponentName = componentName.toLowerCase();
-    for (const projectFilePath of projectFilePaths) {
-      const normalizedProjectFile = normalizePath(projectFilePath);
-      const pathParts = normalizedProjectFile.split(/[\/\\]/);
-      const filename = pathParts[pathParts.length - 1];
-      const filenameWithoutExt = filename.replace(/\.(tsx?|jsx?)$/, '');
-      // Check if file path contains component name in various patterns:
-      // - /ComponentName/ (directory)
-      // - /ComponentName.jsx
-      // - /ComponentName.tsx
-      // - ComponentName.jsx (filename)
-      // - ComponentName.tsx (filename)
-
-      if (normalizedProjectFile.includes(`/${normalizedComponentName}/`) ||
-          normalizedProjectFile.includes(`\\${normalizedComponentName}\\`) ||
-          normalizedProjectFile.endsWith(`/${normalizedComponentName}.jsx`) ||
-          normalizedProjectFile.endsWith(`/${normalizedComponentName}.tsx`) ||
-          normalizedProjectFile.endsWith(`/${normalizedComponentName}.js`) ||
-          normalizedProjectFile.endsWith(`/${normalizedComponentName}.ts`) ||
-          normalizedProjectFile.endsWith(`\\${normalizedComponentName}.jsx`) ||
-          normalizedProjectFile.endsWith(`\\${normalizedComponentName}.tsx`) ||
-          normalizedProjectFile.endsWith(`\\${normalizedComponentName}.js`) ||
-          normalizedProjectFile.endsWith(`\\${normalizedComponentName}.ts`) ||
-          filenameWithoutExt === normalizedComponentName) {
-        return true;
-      }
+    // O(1) lookup using pre-built index instead of O(m) loop through all files
+    if (componentNameToFilesIndex.has(normalizedComponentName)) {
+      return true;
     }
   }
   
@@ -351,19 +341,53 @@ export const setImportMap = (map) => {
  * @param {Array<string>} files - Array of all file paths found in sourcePath
  */
 export const setProjectFiles = (files) => {
-  const fileList = files || [];
+  let fileList = files || [];
   console.log('xray-react: Total project files:', fileList.length);
   
   if (typeof window !== 'undefined' && window.__XRAY_REACT_PROJECT_FILES__ && fileList.length === 0) {
     const globalFiles = window.__XRAY_REACT_PROJECT_FILES__;
     if (Array.isArray(globalFiles)) {
-      fileList.push(...globalFiles);
+      fileList = [...globalFiles];
       console.log('xray-react: Loaded project files from global variable:', fileList.length);
     }
   }
   
   projectFilePaths = new Set(fileList);
+  
+  // Pre-compute normalized paths and component name index for O(1) lookups
+  normalizedProjectFilePaths.clear();
+  componentNameToFilesIndex.clear();
+  
+  for (const filePath of fileList) {
+    const normalized = normalizePath(filePath);
+    normalizedProjectFilePaths.add(normalized);
+    
+    // Extract component name patterns from path
+    const pathParts = normalized.split('/');
+    const filename = pathParts[pathParts.length - 1] || '';
+    const filenameWithoutExt = filename.replace(/\.(tsx?|jsx?)$/, '');
+    
+    // Index by filename (most common lookup pattern)
+    if (filenameWithoutExt) {
+      if (!componentNameToFilesIndex.has(filenameWithoutExt)) {
+        componentNameToFilesIndex.set(filenameWithoutExt, new Set());
+      }
+      componentNameToFilesIndex.get(filenameWithoutExt).add(filePath);
+    }
+    
+    // Also index by directory names for directory-based components
+    for (const part of pathParts.slice(0, -1)) {
+      if (part && part.length > 1) {
+        if (!componentNameToFilesIndex.has(part)) {
+          componentNameToFilesIndex.set(part, new Set());
+        }
+        componentNameToFilesIndex.get(part).add(filePath);
+      }
+    }
+  }
+  
   console.log('xray-react: Updated projectFilePaths with', projectFilePaths.size, 'files');
+  console.log('xray-react: Built component index with', componentNameToFilesIndex.size, 'entries');
 };
 
 /**
@@ -802,7 +826,8 @@ const buildFilteredStructure = (components, currentComponentName, elem) => {
                                 normalizedFile.endsWith(`\\${normalizedName}.js`) ||
                                 filenameWithoutExt === normalizedName;
         
-        const inProjectFilePaths = [...projectFilePaths].some(path => path.toLowerCase().includes(normalizedName));
+        // O(1) lookup using pre-built index instead of O(m) spread + some + includes
+        const inProjectFilePaths = componentNameToFilesIndex.has(normalizedName);
 
         if (!nameMatchesFile && !inProjectFilePaths) {
           continue;
