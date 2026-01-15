@@ -287,7 +287,6 @@ const isProjectComponent = (fiber, projectRootPath, componentName = null) => {
  */
 export const setProjectRoot = (rootPath) => {
   projectRoot = rootPath ? normalizePath(rootPath) : null;
-  console.debug('xray-react: Project root set to:', projectRoot);
   
   if (typeof window !== 'undefined' && window.__XRAY_REACT_PROJECT_ROOT__ && !projectRoot) {
     projectRoot = normalizePath(window.__XRAY_REACT_PROJECT_ROOT__);
@@ -308,7 +307,6 @@ export const getProjectRoot = () => {
  */
 export const setUsageMap = (map) => {
   usageMap = map || {};
-  console.debug('xray-react: Usage map set:', Object.keys(usageMap).length, 'files');
   
   if (typeof window !== 'undefined' && window.__XRAY_REACT_USAGE_MAP__ && Object.keys(usageMap).length === 0) {
     usageMap = window.__XRAY_REACT_USAGE_MAP__;
@@ -327,7 +325,6 @@ export const setUsageMap = (map) => {
  */
 export const setImportMap = (map) => {
   importMap = map || {};
-  console.debug('xray-react: Import map set:', Object.keys(importMap).length, 'files');
   
   if (typeof window !== 'undefined' && window.__XRAY_REACT_IMPORT_MAP__ && Object.keys(importMap).length === 0) {
     importMap = window.__XRAY_REACT_IMPORT_MAP__;
@@ -342,13 +339,11 @@ export const setImportMap = (map) => {
  */
 export const setProjectFiles = (files) => {
   let fileList = files || [];
-  console.log('xray-react: Total project files:', fileList.length);
   
   if (typeof window !== 'undefined' && window.__XRAY_REACT_PROJECT_FILES__ && fileList.length === 0) {
     const globalFiles = window.__XRAY_REACT_PROJECT_FILES__;
     if (Array.isArray(globalFiles)) {
       fileList = [...globalFiles];
-      console.log('xray-react: Loaded project files from global variable:', fileList.length);
     }
   }
   
@@ -385,9 +380,6 @@ export const setProjectFiles = (files) => {
       }
     }
   }
-  
-  console.log('xray-react: Updated projectFilePaths with', projectFilePaths.size, 'files');
-  console.log('xray-react: Built component index with', componentNameToFilesIndex.size, 'entries');
 };
 
 /**
@@ -440,11 +432,10 @@ const detectProjectRootFromDOM = () => {
       const detectedRoot = detectProjectRootFromPaths(filePaths);
       if (detectedRoot) {
         projectRoot = detectedRoot;
-        console.debug('xray-react: Auto-detected project root from DOM:', projectRoot);
       }
     }
   } catch (error) {
-    console.debug('xray-react: Failed to detect project root from DOM:', error);
+    // Silently fail - project root detection is optional
   }
 };
 
@@ -602,7 +593,7 @@ const getComponentObj = (elem) => {
         }
       }
     } catch (error) {
-      console.debug('React DevTools protocol failed, trying legacy detection:', error);
+      // Silently fall back to legacy detection
     }
   }
   
@@ -703,7 +694,7 @@ const getComponentsFromElement = (elem) => {
         components = components.reverse();
       }
     } catch (error) {
-      console.debug('Fiber tree traversal failed in getComponentsFromElement:', error);
+      // Silently fall back to legacy detection
     }
   }
   
@@ -719,7 +710,7 @@ const getComponentsFromElement = (elem) => {
             components = components.reverse();
             break;
           } catch (error) {
-            console.debug('Legacy fiber traversal failed in getComponentsFromElement:', error);
+            // Silently continue to next detection method
           }
         }
       }
@@ -1118,7 +1109,6 @@ export const enableXrayReact = () => {
   if (!projectRoot) {
     if (typeof window !== 'undefined' && window.__XRAY_REACT_PROJECT_ROOT__) {
       projectRoot = normalizePath(window.__XRAY_REACT_PROJECT_ROOT__);
-      console.debug('xray-react: Using project root from global variable:', projectRoot);
     } else {
       setTimeout(() => {
         detectProjectRootFromDOM();
