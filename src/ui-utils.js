@@ -32,18 +32,13 @@ const EXTERNAL_PATTERNS = [
 const normalizePath = (filePath) => {
   if (!filePath) return '';
   
-  // Check cache first for O(1) lookup on repeated calls
   const cached = normalizePathCache.get(filePath);
   if (cached !== undefined) return cached;
   
-  // Convert to string and normalize separators
   let normalized = String(filePath).replace(/\\/g, '/');
-  
-  // Remove leading/trailing slashes for comparison
   normalized = normalized.replace(/^\/+|\/+$/g, '');
   normalized = normalized.toLowerCase();
   
-  // Cache the result
   normalizePathCache.set(filePath, normalized);
   return normalized;
 };
@@ -58,7 +53,6 @@ const isExternalPath = (filePath) => {
   
   const normalized = normalizePath(filePath);
   
-  // Check against external patterns
   return EXTERNAL_PATTERNS.some(pattern => pattern.test(normalized));
 };
 
@@ -93,7 +87,6 @@ const detectProjectRootFromPaths = (filePaths) => {
     return '/' + commonParts.join('/');
   }
   
-  // Fallback: use first path's directory
   const firstPath = projectPaths[0];
   const lastSlash = firstPath.lastIndexOf('/');
   if (lastSlash > 0) {
@@ -185,46 +178,37 @@ const isHTMLElement = (name) => {
 const resolveComponentName = (elementType, fiber = null) => {
   if (!elementType) return null;
 
-  // Handle function components
   if (typeof elementType === 'function') {
-    // Check displayName first (most reliable)
     if (elementType.displayName) {
       return elementType.displayName;
     }
     
-    // Check name
     if (elementType.name && elementType.name !== 'Anonymous') {
       return elementType.name;
     }
     
-    // For forwardRef, memo, etc., check the wrapped component
     if (elementType.render) {
       return resolveComponentName(elementType.render, fiber);
     }
     
-    // Check if it's a forwardRef
     if (elementType.$$typeof && elementType.type) {
       return resolveComponentName(elementType.type, fiber);
     }
   }
   
-  // Handle string types (HTML elements)
   if (typeof elementType === 'string') {
     return elementType;
   }
   
-  // Handle React element types
   if (elementType && elementType.$$typeof) {
     if (elementType.type) {
       return resolveComponentName(elementType.type, fiber);
     }
   }
   
-  // Try to get name from fiber's _debugSource (file path)
   if (fiber && fiber._debugSource) {
     const fileName = fiber._debugSource.fileName;
     if (fileName) {
-      // Extract component name from file path
       const match = fileName.match(/([^/\\]+)\.(jsx?|tsx?)$/);
       if (match) {
         return match[1];
@@ -357,12 +341,10 @@ export const setProjectFiles = (files) => {
     const normalized = normalizePath(filePath);
     normalizedProjectFilePaths.add(normalized);
     
-    // Extract component name patterns from path
     const pathParts = normalized.split('/');
     const filename = pathParts[pathParts.length - 1] || '';
     const filenameWithoutExt = filename.replace(/\.(tsx?|jsx?)$/, '');
     
-    // Index by filename (most common lookup pattern)
     if (filenameWithoutExt) {
       if (!componentNameToFilesIndex.has(filenameWithoutExt)) {
         componentNameToFilesIndex.set(filenameWithoutExt, new Set());
@@ -370,7 +352,6 @@ export const setProjectFiles = (files) => {
       componentNameToFilesIndex.get(filenameWithoutExt).add(filePath);
     }
     
-    // Also index by directory names for directory-based components
     for (const part of pathParts.slice(0, -1)) {
       if (part && part.length > 1) {
         if (!componentNameToFilesIndex.has(part)) {
@@ -502,7 +483,6 @@ const traverseFiberTree = (fiber, maxDepth = MAX_FIBER_DEPTH) => {
       const componentName = resolveComponentName(elementType, currentFiber);
       
       if (componentName) {
-        // Skip HTML elements
         if (!isHTMLElement(componentName)) {
           const isInternal = isProjectComponent(currentFiber, projectRoot, componentName);
           
@@ -698,7 +678,6 @@ const getComponentsFromElement = (elem) => {
     }
   }
   
-  // Legacy detection for React <18
   if (components.length === 0) {
     for (const key of Object.keys(elem)) {
       if (key.startsWith('__reactInternalInstance$')) {
@@ -766,7 +745,6 @@ const buildFullStructure = (components, currentComponentName, elem) => {
     return currentComponentName;
   }
   
-  // Fallback to DOM-based traversal (backward compatibility)
   const domPath = getDomPath(elem);
   
   if (domPath.length > 0) {
@@ -994,7 +972,6 @@ const toggleXrayReact = () => {
       const xrayReactObjects = [];
       const searchAndCreateComponent = searchAndCreateComponentCached();
       const allElements = Array.from(body.getElementsByTagName('*')).filter(elem => {
-        // Exclude xray-react elements and their children
         return !elem.classList.contains('xray-react-element-temp') &&
                !elem.closest('.xray-react-action-bar') &&
                !elem.closest(`.${constants.xrayReactWrapperCN}`);

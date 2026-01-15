@@ -32,7 +32,6 @@ let allProjectFiles = [];
  * @returns {string} Project root path
  */
 function detectProjectRoot(startPath = process.cwd()) {
-  // 1. Check XRAY_REACT_PROJECT_ROOT environment variable first
   if (process.env.XRAY_REACT_PROJECT_ROOT) {
     const envRoot = path.resolve(process.env.XRAY_REACT_PROJECT_ROOT);
     if (fs.existsSync(envRoot)) {
@@ -42,13 +41,11 @@ function detectProjectRoot(startPath = process.cwd()) {
     }
   }
   
-  // 2. Try to find package.json by walking up directory tree
   const packageJsonRoot = detectProjectRootByPackageJson(startPath);
   if (packageJsonRoot) {
     return packageJsonRoot;
   }
   
-  // 3. Last resort: use startPath
   return startPath;
 }
 
@@ -70,16 +67,13 @@ function getProjectRoot() {
  * Uses priority system to prefer component files over style/test files
  */
 function buildSourceMap() {
-  // Clear existing mappings
   Object.keys(sources).forEach(key => delete sources[key]);
   
-  // Detect source paths if not already set
   if (sourcePaths.length === 0) {
     const root = getProjectRoot();
     sourcePaths = detectSourcePaths(root);
   }
   
-  // Collect all mappings with context and priorities
   const mappings = new Map(); // component name -> Array of { filePath, context, priority }
   
   const root = getProjectRoot();
@@ -102,7 +96,6 @@ function buildSourceMap() {
           mappings.set(name, []);
         }
         
-        // Add candidate with context and priority
         mappings.get(name).push({
           path: filePath,
           context: context,
@@ -112,7 +105,6 @@ function buildSourceMap() {
     });
   });
   
-  // Build final sources object: arrays of candidates
   mappings.forEach((candidates, name) => {
     sources[name] = candidates;
   });
@@ -123,16 +115,13 @@ function buildSourceMap() {
  * This includes all React files, not just those with usage/imports
  */
 function collectAllProjectFiles() {
-  // Clear existing list
   allProjectFiles = [];
   
-  // Detect source paths if not already set
   if (sourcePaths.length === 0) {
     const root = getProjectRoot();
     sourcePaths = detectSourcePaths(root);
   }
   
-  // Collect all files from each source path
   sourcePaths.forEach(sourcePath => {
     if (!fs.existsSync(sourcePath)) {
       console.warn(`xray-react: Source path not found: ${sourcePath}`);
@@ -149,16 +138,13 @@ function collectAllProjectFiles() {
  * Maps file path to Set of component names used in JSX
  */
 function buildUsageMapForServer() {
-  // Clear existing map
   Object.keys(usageMap).forEach(key => delete usageMap[key]);
   
-  // Detect source paths if not already set
   if (sourcePaths.length === 0) {
     const root = getProjectRoot();
     sourcePaths = detectSourcePaths(root);
   }
   
-  // Build map using shared utility
   const builtMap = buildUsageMap(sourcePaths);
   Object.assign(usageMap, builtMap);
 }
@@ -168,34 +154,23 @@ function buildUsageMapForServer() {
  * Maps file path to Set of imported component names (fallback for usage map)
  */
 function buildImportMapForServer() {
-  // Clear existing map
   Object.keys(importMap).forEach(key => delete importMap[key]);
   
-  // Detect source paths if not already set
   if (sourcePaths.length === 0) {
     const root = getProjectRoot();
     sourcePaths = detectSourcePaths(root);
   }
   
-  // Build map using shared utility
   const builtMap = buildImportMap(sourcePaths);
   Object.assign(importMap, builtMap);
 }
 
-// Detect and set project root
 projectRoot = getProjectRoot();
-
-// Build source map on startup
 buildSourceMap();
-
-// Collect all project files on startup
 collectAllProjectFiles();
-
-// Build usage and import maps on startup
 buildUsageMapForServer();
 buildImportMapForServer();
 
-// Start HTTP server
 const httpServer = createServer();
 const serverIO = new Server(httpServer, {
   cors: {
@@ -205,17 +180,10 @@ const serverIO = new Server(httpServer, {
 });
 
 serverIO.on('connection', (socket) => {
-  // Send project root and port to client on connection
   const root = getProjectRoot();
   socket.emit('project-config', { projectRoot: root, port: PORT });
-  
-  // Send usage map to client (primary)
   socket.emit('usage-map', { usage: usageMap });
-  
-  // Send import map to client (fallback)
   socket.emit('import-map', { imports: importMap });
-  
-  // Send all project files list to client
   socket.emit('project-files', { files: allProjectFiles });
   
   socket.on('xray-react-component', (structure) => {
@@ -225,7 +193,6 @@ serverIO.on('connection', (socket) => {
       
       for (const name of componentNames) {
         const trimmedName = name.trim();
-        // Use context-aware lookup with full hierarchy
         const filepath = findComponentFile(trimmedName, hierarchy, sources);
         
         if (filepath && fs.existsSync(filepath)) {
@@ -240,7 +207,6 @@ serverIO.on('connection', (socket) => {
   
   socket.on('register-source', (data) => {
     if (data.name && data.path) {
-      // Support new format: array of candidates
       if (!sources[data.name]) {
         sources[data.name] = [];
       }
@@ -267,7 +233,6 @@ httpServer.listen(PORT, () => {
   console.log(`xray-react: Editor: ${process.env.XRAY_REACT_EDITOR || 'not set'}`);
 });
 
-// Handle graceful shutdown
 process.on('SIGINT', () => {
   console.log('\nxray-react: Shutting down server...');
   serverIO.close();
