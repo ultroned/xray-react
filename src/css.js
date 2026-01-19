@@ -161,4 +161,19 @@ export default `
   @keyframes xray-react-spin {
     to { transform: rotate(360deg); }
   }
+  /* Simple mode styles */
+  .xray-react-elements-wrapper.-simple-mode {
+    border: 2px solid blue;
+    box-sizing: border-box;
+  }
+  .xray-react-elements-wrapper.-simple-mode .xray-react-element {
+    opacity: 0;
+    pointer-events: auto;
+  }
+  .xray-react-elements-wrapper.-simple-mode .xray-react-element:hover {
+    opacity: 1;
+  }
+  .xray-react-action-bar.-simple-mode #search-component {
+    display: none;
+  }
 `;

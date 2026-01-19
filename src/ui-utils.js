@@ -1,6 +1,7 @@
 import * as constants from './constants.js';
 import { styleTag, actionBar } from './partials.js';
 import css from './css.js';
+import { UI_MODE_FULL, UI_MODE_SIMPLE, AVAILABLE_UI_MODES } from './constants.js';
 
 const MAX_FIBER_DEPTH = 50; // Prevent infinite loops
 
@@ -11,6 +12,7 @@ let projectFilePaths = new Set();
 let normalizedProjectFilePaths = new Set();           // Pre-normalized paths for O(1) lookup
 let componentNameToFilesIndex = new Map();            // componentName -> Set<filePath> for O(1) lookup
 const normalizePathCache = new Map();                 // Memoization cache for normalizePath
+let currentMode = UI_MODE_FULL;
 
 const EXTERNAL_PATTERNS = [
   /node_modules/i,
@@ -134,6 +136,37 @@ const handleSearchChange = (event) => {
       elem.classList.remove('-highlighted');
     }
   }
+};
+
+/**
+ * Gets the current mode from window or defaults to UI_MODE_FULL
+ * @returns {string} Current mode (UI_MODE_FULL or UI_MODE_SIMPLE)
+ */
+const getCurrentMode = () => {
+  if (typeof window !== 'undefined' && window.__XRAY_REACT_MODE__) {
+    const mode = window.__XRAY_REACT_MODE__;
+    return AVAILABLE_UI_MODES.includes(mode) ? mode : UI_MODE_FULL;
+  }
+  return UI_MODE_FULL;
+};
+
+/**
+ * Sets the current mode
+ * @param {string} mode - Mode to set (UI_MODE_FULL or UI_MODE_SIMPLE)
+ */
+export const setMode = (mode) => {
+  currentMode = AVAILABLE_UI_MODES.includes(mode) ? mode : UI_MODE_FULL;
+  if (typeof window !== 'undefined') {
+    window.__XRAY_REACT_MODE__ = currentMode;
+  }
+};
+
+/**
+ * Gets the current mode
+ * @returns {string} Current mode
+ */
+export const getMode = () => {
+  return currentMode;
 };
 
 /**
@@ -904,6 +937,7 @@ const onXrayReactMouseover = (event) => {
   }
 };
 
+
 /**
  * Toggles the xray-react overlay on/off
  */
@@ -917,6 +951,9 @@ const toggleXrayReact = () => {
     const xrayReactStyleTag = document.querySelector('.xray-react-style-tag');
     const tempElements = document.querySelectorAll('.xray-react-element-temp');
     
+    if (xrayReactActionBar) {
+      xrayReactActionBar.classList.remove('-simple-mode');
+    }
     if (xrayReactElementsWrapper) xrayReactElementsWrapper.remove();
     if (xrayReactActionBar) xrayReactActionBar.remove();
     if (xrayReactStyleTag) xrayReactStyleTag.remove();
@@ -925,7 +962,9 @@ const toggleXrayReact = () => {
     body.removeEventListener('mouseover', onXrayReactMouseover);
   } else {
     body.classList.add('xray-react-enabled');
-    
+
+    currentMode = getCurrentMode();
+
     let styleElement = document.querySelector('.xray-react-style-tag');
     if (!styleElement) {
       styleElement = document.createElement('style');
@@ -938,7 +977,18 @@ const toggleXrayReact = () => {
     if (!existingActionBar) {
       body.insertAdjacentHTML('beforeend', actionBar);
     }
-    
+    if (currentMode === UI_MODE_SIMPLE && existingActionBar) {
+      existingActionBar.classList.add('-simple-mode');
+    } else if (currentMode === UI_MODE_SIMPLE && !existingActionBar) {
+      setTimeout(() => {
+        const actionBar = document.querySelector('.xray-react-action-bar');
+        if (actionBar) {
+          actionBar.classList.add('-simple-mode');
+        }
+      }, 0);
+    } else if (currentMode !== UI_MODE_SIMPLE && existingActionBar) {
+      existingActionBar.classList.remove('-simple-mode');
+    }
     const searchInput = document.getElementById('search-component');
     if (searchInput) {
       searchInput.addEventListener('input', handleSearchChange);
@@ -952,8 +1002,16 @@ const toggleXrayReact = () => {
     
     const xrayReactElementsWrapper = document.createElement('div');
     xrayReactElementsWrapper.className = constants.xrayReactWrapperCN;
+    if (currentMode === UI_MODE_SIMPLE) {
+      xrayReactElementsWrapper.classList.add('-simple-mode');
+    }
     body.append(xrayReactElementsWrapper);
-    
+    if (currentMode === UI_MODE_SIMPLE) {
+      const actionBar = document.querySelector('.xray-react-action-bar');
+      if (actionBar) {
+        actionBar.classList.add('-simple-mode');
+      }
+    }
     const existingLoading = document.querySelectorAll('.xray-react-element-temp');
     existingLoading.forEach(el => el.remove());
     
@@ -1083,6 +1141,8 @@ const handleXrayReactToggle = () => {
  * Enables xray-react functionality
  */
 export const enableXrayReact = () => {
+  currentMode = getCurrentMode();
+
   if (!projectRoot) {
     if (typeof window !== 'undefined' && window.__XRAY_REACT_PROJECT_ROOT__) {
       projectRoot = normalizePath(window.__XRAY_REACT_PROJECT_ROOT__);
@@ -1092,7 +1152,7 @@ export const enableXrayReact = () => {
       }, 1000);
     }
   }
-  
+
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', handleXrayReactToggle);
   } else {

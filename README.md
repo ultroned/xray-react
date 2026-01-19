@@ -58,7 +58,8 @@ export default {
         output: 'bundle.js', // optional: specify output filename
         server: true, // optional: enable Socket.IO server (default: true)
         sourcePath: '/path/to/src', // optional: specify source path
-        port: 9000 // optional: specify port (default: 8124)
+        port: 9000, // optional: specify port (default: 8124)
+        mode: 'full' // optional: 'full' or 'simple' (default: 'full')
       })
     ] : [])
   ]
@@ -86,7 +87,8 @@ export default defineConfig(({ mode }) => ({
       xrayReactVitePlugin({
         server: true, // optional: enable Socket.IO server (default: true)
         sourcePath: '/path/to/src', // optional: specify source path
-        port: 9000 // optional: specify port (default: 8124)
+        port: 9000, // optional: specify port (default: 8124)
+        mode: 'full' // optional: 'full' or 'simple' (default: 'full')
       })
     ] : [])
   ]
@@ -114,7 +116,8 @@ export default {
         new XrayReactWebpackPlugin({
           server: true, // optional: enable Socket.IO server (default: true)
           sourcePath: process.cwd(), // optional: specify source path
-          port: 9000 // optional: specify port (default: 8124)
+          port: 9000, // optional: specify port (default: 8124)
+          mode: 'full' // optional: 'full' or 'simple' (default: 'full')
         })
       );
     }
@@ -200,6 +203,12 @@ Environment variables are primarily for **standalone server usage** or **global 
   
   **Note:** When using bundler plugins, this env var has lower precedence than plugin parameters. The port is automatically injected into the client bundle. For manual imports, you need to set `window.__XRAY_REACT_PORT__` before the client script loads.
 
+- `XRAY_REACT_MODE` - Set the display mode (primarily for standalone server, default: `full`)
+  ```bash
+  export XRAY_REACT_MODE=simple  # or 'full'
+  ```
+  **Note:** When using bundler plugins, this env var has lower precedence than plugin parameters. See [Display Modes](#display-modes) for more information.
+
 ### Plugin Options
 
 All plugins accept the following options:
@@ -208,8 +217,26 @@ All plugins accept the following options:
 - `server` (boolean) - Whether to run the Socket.IO server for handling file opening. Defaults to `true`.
 - `sourcePath` (string) - Absolute path to your source files (e.g., `/home/user/project/src`). Takes precedence over auto-detection and env vars.
 - `port` (number) - Port for the Socket.IO server. Takes precedence over `XRAY_REACT_PORT` env var. Defaults to `8124`.
+- `mode` (string) - Display mode: `'full'` or `'simple'`. Takes precedence over `XRAY_REACT_MODE` env var. Defaults to `'full'`. See [Display Modes](#display-modes) for more information.
 
 **Note:** All plugins automatically detect and skip server-side builds (SSR, Next.js server builds, etc.). The plugin only runs for client-side builds.
+
+## Display Modes
+
+xray-react supports two display modes:
+
+### Full Mode (default)
+
+In full mode, all component overlays are visible immediately when xray-react is activated. This is the traditional behavior where you can see all React components at once.
+
+### Simple Mode
+
+In simple mode, only the action bar is visible initially (the search component is hidden). Component overlays are shown only when you hover over their corresponding DOM elements. This provides a cleaner, less cluttered view and is useful when you want to inspect components one at a time.
+
+- **Action bar**: Always visible at the bottom
+- **Search component**: Hidden in simple mode
+- **Component overlays**: Hidden by default, shown on hover
+- **Screen border**: Thin blue border around the viewport to indicate xray-react is active
 
 ## Keyboard Shortcuts
 

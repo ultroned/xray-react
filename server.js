@@ -14,8 +14,12 @@ import {
   detectSourcePaths,
   detectProjectRootByPackageJson,
 } from './lib/source-utils.js';
+import { UI_MODE_FULL, AVAILABLE_UI_MODES } from './lib/constants.js';
 
 const PORT = parseInt(process.env.XRAY_REACT_PORT || '8124', 10);
+const MODE = AVAILABLE_UI_MODES.includes(process.env.XRAY_REACT_MODE)
+  ? process.env.XRAY_REACT_MODE
+  : UI_MODE_FULL;
 const sources = {};
 let projectRoot = null;
 const usageMap = {};
@@ -181,7 +185,7 @@ const serverIO = new Server(httpServer, {
 
 serverIO.on('connection', (socket) => {
   const root = getProjectRoot();
-  socket.emit('project-config', { projectRoot: root, port: PORT });
+  socket.emit('project-config', { projectRoot: root, port: PORT, mode: MODE });
   socket.emit('usage-map', { usage: usageMap });
   socket.emit('import-map', { imports: importMap });
   socket.emit('project-files', { files: allProjectFiles });
