@@ -11,13 +11,13 @@ React UI layout debugging tool inspired by [Xray-rails](https://github.com/brent
 
 Xray-react is a development tool that reveals your React UI's component structure. Press **Cmd+Shift+X** (Mac) or **Ctrl+Shift+X** (Windows/Linux) to reveal an overlay of the React components that rendered your UI, and click any component to open its source file in your editor.
 
-![Example](media/example.gif)
-<details>
-  <summary>Real-world example</summary>
-  <p>
-    <img src="media/example-complex.gif" alt="Real-world example" />
-  </p>
-</details>
+### Full Mode (default)
+
+![Full Mode Example](media/example.gif)
+
+### Simple Mode
+
+![Simple Mode Example](media/example-simple.gif)
 
 ## Features
 
