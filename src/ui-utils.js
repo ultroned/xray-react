@@ -1,5 +1,5 @@
 import * as constants from './constants.js';
-import { styleTag, actionBar } from './partials.js';
+import { actionBar } from './partials.js';
 import css from './css.js';
 import { UI_MODE_FULL, UI_MODE_SIMPLE, AVAILABLE_UI_MODES } from './constants.js';
 
@@ -9,19 +9,19 @@ let projectRoot = null;
 let usageMap = {};
 let importMap = {};
 let projectFilePaths = new Set();
-let normalizedProjectFilePaths = new Set();           // Pre-normalized paths for O(1) lookup
-let componentNameToFilesIndex = new Map();            // componentName -> Set<filePath> for O(1) lookup
-const normalizePathCache = new Map();                 // Memoization cache for normalizePath
+let normalizedProjectFilePaths = new Set(); // Pre-normalized paths for O(1) lookup
+let componentNameToFilesIndex = new Map(); // componentName -> Set<filePath> for O(1) lookup
+const normalizePathCache = new Map(); // Memoization cache for normalizePath
 let currentMode = UI_MODE_FULL;
 
 const EXTERNAL_PATTERNS = [
   /node_modules/i,
-  /\.next[\/\\]/i,
-  /dist[\/\\]/i,
-  /build[\/\\]/i,
-  /\.git[\/\\]/i,
-  /\.cache[\/\\]/i,
-  /coverage[\/\\]/i,
+  /\.next[/\\]/i,
+  /dist[/\\]/i,
+  /build[/\\]/i,
+  /\.git[/\\]/i,
+  /\.cache[/\\]/i,
+  /coverage[/\\]/i,
 ];
 
 /**
@@ -33,14 +33,14 @@ const EXTERNAL_PATTERNS = [
  */
 const normalizePath = (filePath) => {
   if (!filePath) return '';
-  
+
   const cached = normalizePathCache.get(filePath);
   if (cached !== undefined) return cached;
-  
+
   let normalized = String(filePath).replace(/\\/g, '/');
   normalized = normalized.replace(/^\/+|\/+$/g, '');
   normalized = normalized.toLowerCase();
-  
+
   normalizePathCache.set(filePath, normalized);
   return normalized;
 };
@@ -52,10 +52,10 @@ const normalizePath = (filePath) => {
  */
 const isExternalPath = (filePath) => {
   if (!filePath) return false;
-  
+
   const normalized = normalizePath(filePath);
-  
-  return EXTERNAL_PATTERNS.some(pattern => pattern.test(normalized));
+
+  return EXTERNAL_PATTERNS.some((pattern) => pattern.test(normalized));
 };
 
 /**
@@ -65,36 +65,34 @@ const isExternalPath = (filePath) => {
  */
 const detectProjectRootFromPaths = (filePaths) => {
   if (!filePaths || filePaths.length === 0) return null;
-  
-  const projectPaths = filePaths
-    .filter(path => path && !isExternalPath(path))
-    .map(normalizePath);
-  
+
+  const projectPaths = filePaths.filter((path) => path && !isExternalPath(path)).map(normalizePath);
+
   if (projectPaths.length === 0) return null;
-  
-  const pathParts = projectPaths.map(path => path.split('/'));
-  const minLength = Math.min(...pathParts.map(parts => parts.length));
-  
+
+  const pathParts = projectPaths.map((path) => path.split('/'));
+  const minLength = Math.min(...pathParts.map((parts) => parts.length));
+
   let commonParts = [];
   for (let i = 0; i < minLength; i++) {
     const part = pathParts[0][i];
-    if (pathParts.every(parts => parts[i] === part)) {
+    if (pathParts.every((parts) => parts[i] === part)) {
       commonParts.push(part);
     } else {
       break;
     }
   }
-  
+
   if (commonParts.length > 0) {
     return '/' + commonParts.join('/');
   }
-  
+
   const firstPath = projectPaths[0];
   const lastSlash = firstPath.lastIndexOf('/');
   if (lastSlash > 0) {
     return '/' + firstPath.substring(0, lastSlash);
   }
-  
+
   return null;
 };
 
@@ -105,7 +103,7 @@ const detectProjectRootFromPaths = (filePaths) => {
  */
 const removeConsecutiveDuplicates = (path) => {
   if (path.length === 0) return path;
-  
+
   const result = [path[0]];
   for (let i = 1; i < path.length; i++) {
     if (path[i].toLowerCase() !== path[i - 1].toLowerCase()) {
@@ -135,14 +133,14 @@ const handleSearchChange = (event) => {
   const value = input.value.toLowerCase();
   const regExp = new RegExp(`^${value}|${value}$`);
   const elements = document.querySelectorAll(`.${constants.xrayReactElemCN}`);
-  
+
   updateClearButton(input);
-  
+
   for (const elem of elements) {
     if (value.length >= 2) {
       const searchName = elem.getAttribute('data-xray-react-element-search-name');
       if (searchName && searchName.match(regExp)) {
-    elem.classList.add('-highlighted');
+        elem.classList.add('-highlighted');
       } else {
         elem.classList.remove('-highlighted');
       }
@@ -154,16 +152,15 @@ const handleSearchChange = (event) => {
 
 /**
  * Handles clear button click to reset search
- * @param {Event} event - Click event
  */
-const handleSearchClear = (event) => {
+const handleSearchClear = () => {
   const input = document.getElementById('search-component');
   if (input) {
     input.value = '';
     input.focus();
     updateClearButton(input);
     const elements = document.querySelectorAll(`.${constants.xrayReactElemCN}`);
-    elements.forEach(elem => elem.classList.remove('-highlighted'));
+    elements.forEach((elem) => elem.classList.remove('-highlighted'));
   }
 };
 
@@ -207,7 +204,7 @@ export const getMode = () => {
 const createElemForComponent = (elem, componentName) => {
   const xrayReactElem = document.createElement('div');
   const boundingClientRect = elem.getBoundingClientRect();
-  
+
   xrayReactElem.className = constants.xrayReactElemCN;
   xrayReactElem.setAttribute('data-xray-react-element-name', componentName);
   xrayReactElem.setAttribute('data-xray-react-element-search-name', componentName.toLowerCase());
@@ -216,7 +213,7 @@ const createElemForComponent = (elem, componentName) => {
   xrayReactElem.style.top = `${boundingClientRect.top + window.scrollY}px`;
   xrayReactElem.style.left = `${boundingClientRect.left + window.scrollX}px`;
   xrayReactElem.style.zIndex = constants.zIndex;
-  
+
   return { elem, xrayReactElem };
 };
 
@@ -244,30 +241,30 @@ const resolveComponentName = (elementType, fiber = null) => {
     if (elementType.displayName) {
       return elementType.displayName;
     }
-    
+
     if (elementType.name && elementType.name !== 'Anonymous') {
       return elementType.name;
     }
-    
+
     if (elementType.render) {
       return resolveComponentName(elementType.render, fiber);
     }
-    
+
     if (elementType.$$typeof && elementType.type) {
       return resolveComponentName(elementType.type, fiber);
     }
   }
-  
+
   if (typeof elementType === 'string') {
     return elementType;
   }
-  
+
   if (elementType && elementType.$$typeof) {
     if (elementType.type) {
       return resolveComponentName(elementType.type, fiber);
     }
   }
-  
+
   if (fiber && fiber._debugSource) {
     const fileName = fiber._debugSource.fileName;
     if (fileName) {
@@ -277,7 +274,7 @@ const resolveComponentName = (elementType, fiber = null) => {
       }
     }
   }
-  
+
   return null;
 };
 
@@ -299,23 +296,25 @@ const isProjectComponent = (fiber, projectRootPath, componentName = null) => {
     if (isExternalPath(filePath)) {
       return false;
     }
-    
+
     const normalizedFilePath = normalizePath(filePath);
     const normalizedProjectRoot = normalizePath(projectRootPath);
-    
+
     if (normalizedFilePath.startsWith(normalizedProjectRoot)) {
       return true;
     }
-    
-    if (!normalizedFilePath.includes('node_modules') && 
-        !normalizedFilePath.startsWith('/') &&
-        !normalizedFilePath.match(/^[a-z]:/i)) {
+
+    if (
+      !normalizedFilePath.includes('node_modules') &&
+      !normalizedFilePath.startsWith('/') &&
+      !normalizedFilePath.match(/^[a-z]:/i)
+    ) {
       return true;
     }
-    
+
     return false;
   }
-  
+
   if (componentName) {
     const normalizedComponentName = componentName.toLowerCase();
     // O(1) lookup using pre-built index instead of O(m) loop through all files
@@ -323,7 +322,7 @@ const isProjectComponent = (fiber, projectRootPath, componentName = null) => {
       return true;
     }
   }
-  
+
   return false;
 };
 
@@ -333,7 +332,7 @@ const isProjectComponent = (fiber, projectRootPath, componentName = null) => {
  */
 export const setProjectRoot = (rootPath) => {
   projectRoot = rootPath ? normalizePath(rootPath) : null;
-  
+
   if (typeof window !== 'undefined' && window.__XRAY_REACT_PROJECT_ROOT__ && !projectRoot) {
     projectRoot = normalizePath(window.__XRAY_REACT_PROJECT_ROOT__);
   }
@@ -353,15 +352,19 @@ export const getProjectRoot = () => {
  */
 export const setUsageMap = (map) => {
   usageMap = map || {};
-  
-  if (typeof window !== 'undefined' && window.__XRAY_REACT_USAGE_MAP__ && Object.keys(usageMap).length === 0) {
+
+  if (
+    typeof window !== 'undefined' &&
+    window.__XRAY_REACT_USAGE_MAP__ &&
+    Object.keys(usageMap).length === 0
+  ) {
     usageMap = window.__XRAY_REACT_USAGE_MAP__;
   }
-  
+
   if (projectFilePaths.size === 0) {
     projectFilePaths = new Set(Object.keys(usageMap || {}));
   } else {
-    Object.keys(usageMap || {}).forEach(filePath => projectFilePaths.add(filePath));
+    Object.keys(usageMap || {}).forEach((filePath) => projectFilePaths.add(filePath));
   }
 };
 
@@ -371,12 +374,16 @@ export const setUsageMap = (map) => {
  */
 export const setImportMap = (map) => {
   importMap = map || {};
-  
-  if (typeof window !== 'undefined' && window.__XRAY_REACT_IMPORT_MAP__ && Object.keys(importMap).length === 0) {
+
+  if (
+    typeof window !== 'undefined' &&
+    window.__XRAY_REACT_IMPORT_MAP__ &&
+    Object.keys(importMap).length === 0
+  ) {
     importMap = window.__XRAY_REACT_IMPORT_MAP__;
   }
-  
-  Object.keys(importMap || {}).forEach(filePath => projectFilePaths.add(filePath));
+
+  Object.keys(importMap || {}).forEach((filePath) => projectFilePaths.add(filePath));
 };
 
 /**
@@ -385,35 +392,39 @@ export const setImportMap = (map) => {
  */
 export const setProjectFiles = (files) => {
   let fileList = files || [];
-  
-  if (typeof window !== 'undefined' && window.__XRAY_REACT_PROJECT_FILES__ && fileList.length === 0) {
+
+  if (
+    typeof window !== 'undefined' &&
+    window.__XRAY_REACT_PROJECT_FILES__ &&
+    fileList.length === 0
+  ) {
     const globalFiles = window.__XRAY_REACT_PROJECT_FILES__;
     if (Array.isArray(globalFiles)) {
       fileList = [...globalFiles];
     }
   }
-  
+
   projectFilePaths = new Set(fileList);
-  
+
   // Pre-compute normalized paths and component name index for O(1) lookups
   normalizedProjectFilePaths.clear();
   componentNameToFilesIndex.clear();
-  
+
   for (const filePath of fileList) {
     const normalized = normalizePath(filePath);
     normalizedProjectFilePaths.add(normalized);
-    
+
     const pathParts = normalized.split('/');
     const filename = pathParts[pathParts.length - 1] || '';
     const filenameWithoutExt = filename.replace(/\.(tsx?|jsx?)$/, '');
-    
+
     if (filenameWithoutExt) {
       if (!componentNameToFilesIndex.has(filenameWithoutExt)) {
         componentNameToFilesIndex.set(filenameWithoutExt, new Set());
       }
       componentNameToFilesIndex.get(filenameWithoutExt).add(filePath);
     }
-    
+
     for (const part of pathParts.slice(0, -1)) {
       if (part && part.length > 1) {
         if (!componentNameToFilesIndex.has(part)) {
@@ -433,30 +444,25 @@ const detectProjectRootFromDOM = () => {
   if (projectRoot) {
     return;
   }
-  
+
   try {
     const filePaths = [];
     const maxSamples = 50; // Limit samples for performance
     let samples = 0;
-    
-    const walker = document.createTreeWalker(
-      document.body,
-      NodeFilter.SHOW_ELEMENT,
-      null,
-      false
-    );
-    
+
+    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_ELEMENT, null, false);
+
     let node;
     while ((node = walker.nextNode()) && samples < maxSamples) {
-      const fiberKey = Object.keys(node).find(key =>
-        key.startsWith('__reactFiber$') || key.startsWith('__reactInternalInstance$')
+      const fiberKey = Object.keys(node).find(
+        (key) => key.startsWith('__reactFiber$') || key.startsWith('__reactInternalInstance$'),
       );
-      
+
       if (fiberKey) {
         const fiber = node[fiberKey];
         let currentFiber = fiber;
         let depth = 0;
-        
+
         while (currentFiber && depth < 10) {
           if (currentFiber._debugSource && currentFiber._debugSource.fileName) {
             const filePath = currentFiber._debugSource.fileName;
@@ -470,14 +476,14 @@ const detectProjectRootFromDOM = () => {
         }
       }
     }
-    
+
     if (filePaths.length > 0) {
       const detectedRoot = detectProjectRootFromPaths(filePaths);
       if (detectedRoot) {
         projectRoot = detectedRoot;
       }
     }
-  } catch (error) {
+  } catch {
     // Silently fail - project root detection is optional
   }
 };
@@ -493,28 +499,28 @@ const isUsedByInternalComponents = (componentName, seenInternalComponents) => {
   if (!componentName || seenInternalComponents.length === 0) {
     return false;
   }
-  
+
   if (Object.keys(usageMap).length === 0 && Object.keys(importMap).length === 0) {
     return true;
   }
-  
+
   for (const internalComp of seenInternalComponents) {
     const filePath = internalComp.file;
     if (!filePath) continue;
-    
+
     if (usageMap[filePath] && Array.isArray(usageMap[filePath])) {
       if (usageMap[filePath].includes(componentName)) {
         return true;
       }
     }
-    
+
     if (importMap[filePath] && Array.isArray(importMap[filePath])) {
       if (importMap[filePath].includes(componentName)) {
         return true;
       }
     }
   }
-  
+
   return false;
 };
 
@@ -532,50 +538,47 @@ const traverseFiberTree = (fiber, maxDepth = MAX_FIBER_DEPTH) => {
   let depth = 0;
   // Performance improvements
   const visited = new Set();
-  
+
   while (currentFiber && depth < maxDepth) {
     if (visited.has(currentFiber)) {
       break;
     }
     visited.add(currentFiber);
-    
+
     const elementType = currentFiber.elementType || currentFiber.type;
-    
+
     if (elementType) {
       const componentName = resolveComponentName(elementType, currentFiber);
-      
+
       if (componentName) {
         if (!isHTMLElement(componentName)) {
           const isInternal = isProjectComponent(currentFiber, projectRoot, componentName);
-          
+
           let filePath = null;
           if (currentFiber._debugSource && currentFiber._debugSource.fileName) {
             filePath = currentFiber._debugSource.fileName;
           }
-          
+
           allComponents.push({
             name: componentName,
             fiber: currentFiber,
             elementType: elementType,
             depth: depth,
             isInternal: isInternal,
-            file: filePath
+            file: filePath,
           });
-          
+
           if (isInternal) {
-            internalComponents.push({
-              name: componentName,
-              file: filePath
-            });
+            internalComponents.push({ name: componentName, file: filePath });
           }
         }
       }
     }
-    
+
     currentFiber = currentFiber.return || currentFiber._owner;
     depth++;
   }
-  
+
   const filteredComponents = [];
   for (const comp of allComponents) {
     if (comp.isInternal) {
@@ -585,7 +588,7 @@ const traverseFiberTree = (fiber, maxDepth = MAX_FIBER_DEPTH) => {
         elementType: comp.elementType,
         depth: comp.depth,
         file: comp.file,
-        isInternal: comp.isInternal
+        isInternal: comp.isInternal,
       });
     } else {
       if (isUsedByInternalComponents(comp.name, internalComponents)) {
@@ -595,12 +598,12 @@ const traverseFiberTree = (fiber, maxDepth = MAX_FIBER_DEPTH) => {
           elementType: comp.elementType,
           depth: comp.depth,
           file: comp.file,
-          isInternal: comp.isInternal
+          isInternal: comp.isInternal,
         });
       }
     }
   }
-  
+
   return filteredComponents;
 };
 
@@ -614,31 +617,28 @@ const traverseFiberTree = (fiber, maxDepth = MAX_FIBER_DEPTH) => {
 const getComponentObj = (elem) => {
   if (window.__REACT_DEVTOOLS_GLOBAL_HOOK__) {
     try {
-      const fiberKey = Object.keys(elem).find(key => 
-        key.startsWith('__reactFiber$') || key.startsWith('__reactInternalInstance$')
+      const fiberKey = Object.keys(elem).find(
+        (key) => key.startsWith('__reactFiber$') || key.startsWith('__reactInternalInstance$'),
       );
-      
+
       if (fiberKey) {
         const fiber = elem[fiberKey];
         const components = traverseFiberTree(fiber);
-        
+
         if (components.length > 0) {
           const firstComponent = components[0];
-          const uid = firstComponent.fiber._debugID || 
-                     `${firstComponent.fiber.index || ''}${firstComponent.fiber.key || ''}`;
-          const reversedHierarchy = components.reverse().map(c => c.name);
-          return { 
-            name: firstComponent.name, 
-            uid,
-            hierarchy: reversedHierarchy
-          };
+          const uid =
+            firstComponent.fiber._debugID ||
+            `${firstComponent.fiber.index || ''}${firstComponent.fiber.key || ''}`;
+          const reversedHierarchy = components.reverse().map((c) => c.name);
+          return { name: firstComponent.name, uid, hierarchy: reversedHierarchy };
         }
       }
-    } catch (error) {
+    } catch {
       // Silently fall back to legacy detection
     }
   }
-  
+
   for (const key of Object.keys(elem)) {
     if (key.startsWith('__reactInternalInstance$')) {
       const fiberNode = elem[key];
@@ -647,27 +647,27 @@ const getComponentObj = (elem) => {
           const components = traverseFiberTree(fiberNode);
           if (components.length > 0) {
             const firstComponent = components[0];
-            const reversedHierarchy = components.reverse().map(c => c.name);
-            return { 
+            const reversedHierarchy = components.reverse().map((c) => c.name);
+            return {
               name: firstComponent.name,
               uid: `${fiberNode._mountIndex || ''}${fiberNode._mountOrder || ''}`,
-              hierarchy: reversedHierarchy
+              hierarchy: reversedHierarchy,
             };
           }
-        } catch (error) {
+        } catch {
           // Continue to old legacy detection
         }
       }
-      
+
       if (fiberNode && fiberNode._currentElement) {
         const owner = fiberNode._currentElement._owner;
         const fiber = owner && owner._instance;
         if (fiber) {
           const componentName = fiber.constructor.name;
           if (!isHTMLElement(componentName)) {
-            return { 
-              name: componentName, 
-              uid: `${owner._mountIndex || ''}${owner._mountOrder || ''}` 
+            return {
+              name: componentName,
+              uid: `${owner._mountIndex || ''}${owner._mountOrder || ''}`,
             };
           }
         }
@@ -682,12 +682,12 @@ const getComponentObj = (elem) => {
       }
     }
   }
-  
+
   const tagName = elem.tagName?.toLowerCase();
   if (tagName && isHTMLElement(tagName)) {
     return { name: tagName };
   }
-  
+
   return {};
 };
 
@@ -700,7 +700,7 @@ const searchAndCreateComponentCached = () => {
   const uids = new Set();
   return (elem) => {
     const { name, uid } = getComponentObj(elem);
-    
+
     if (name && name !== 'Unknown') {
       if (uid) {
         if (!uids.has(uid)) {
@@ -722,24 +722,24 @@ const searchAndCreateComponentCached = () => {
  */
 const getComponentsFromElement = (elem) => {
   let components = [];
-  
+
   if (window.__REACT_DEVTOOLS_GLOBAL_HOOK__) {
     try {
-      const fiberKey = Object.keys(elem).find(key => 
-        key.startsWith('__reactFiber$') || key.startsWith('__reactInternalInstance$')
+      const fiberKey = Object.keys(elem).find(
+        (key) => key.startsWith('__reactFiber$') || key.startsWith('__reactInternalInstance$'),
       );
-      
+
       if (fiberKey) {
         const fiber = elem[fiberKey];
         components = traverseFiberTree(fiber);
         // Reverse to get parent -> child order (traversal goes child -> parent)
         components = components.reverse();
       }
-    } catch (error) {
+    } catch {
       // Silently fall back to legacy detection
     }
   }
-  
+
   if (components.length === 0) {
     for (const key of Object.keys(elem)) {
       if (key.startsWith('__reactInternalInstance$')) {
@@ -750,14 +750,14 @@ const getComponentsFromElement = (elem) => {
             // Reverse to get parent -> child order
             components = components.reverse();
             break;
-          } catch (error) {
+          } catch {
             // Silently continue to next detection method
           }
         }
       }
     }
   }
-  
+
   return components;
 };
 
@@ -770,7 +770,7 @@ const getDomPath = (elem) => {
   let currentElem = elem;
   const domPath = [];
   const seenComponentNames = new Set();
-  
+
   while (currentElem && currentElem.parentNode && domPath.length < 20) {
     currentElem = currentElem.parentNode;
     const { name: component } = getComponentObj(currentElem);
@@ -782,7 +782,7 @@ const getDomPath = (elem) => {
       }
     }
   }
-  
+
   return domPath;
 };
 
@@ -795,24 +795,24 @@ const getDomPath = (elem) => {
  */
 const buildFullStructure = (components, currentComponentName, elem) => {
   if (components.length > 0) {
-    const filteredComponents = components.filter(comp => 
-      comp.name !== currentComponentName && !isHTMLElement(comp.name)
+    const filteredComponents = components.filter(
+      (comp) => comp.name !== currentComponentName && !isHTMLElement(comp.name),
     );
-    
+
     if (filteredComponents.length > 0) {
-      const fullPath = filteredComponents.map(comp => comp.name);
+      const fullPath = filteredComponents.map((comp) => comp.name);
       return [...fullPath, currentComponentName].join(' -> ');
     }
-    
+
     return currentComponentName;
   }
-  
+
   const domPath = getDomPath(elem);
-  
+
   if (domPath.length > 0) {
     return [...domPath, currentComponentName].join(' -> ');
   }
-  
+
   return currentComponentName;
 };
 
@@ -825,45 +825,46 @@ const buildFullStructure = (components, currentComponentName, elem) => {
  */
 const buildFilteredStructure = (components, currentComponentName, elem) => {
   if (components.length > 0) {
-    const filteredComponents = components.filter(comp => 
-      comp.name !== currentComponentName && !isHTMLElement(comp.name)
+    const filteredComponents = components.filter(
+      (comp) => comp.name !== currentComponentName && !isHTMLElement(comp.name),
     );
-    
+
     const seenComponents = new Set();
     const projectOwnedComponents = [];
-    
+
     for (const comp of filteredComponents) {
       if (!comp.isInternal) {
         continue;
       }
 
       const normalizedName = comp.name.toLowerCase();
-      
+
       if (comp.file) {
         const normalizedFile = comp.file.toLowerCase();
-        const pathParts = normalizedFile.split(/[\/\\]/);
+        const pathParts = normalizedFile.split(/[/\\]/);
         const filename = pathParts[pathParts.length - 1];
         const filenameWithoutExt = filename.replace(/\.(tsx?|jsx?)$/, '');
 
-        const nameMatchesFile = normalizedFile.includes(`/${normalizedName}`) || 
-                                normalizedFile.includes(`\\${normalizedName}`) ||
-                                normalizedFile.endsWith(`/${normalizedName}.tsx`) ||
-                                normalizedFile.endsWith(`/${normalizedName}.ts`) ||
-                                normalizedFile.endsWith(`/${normalizedName}.jsx`) ||
-                                normalizedFile.endsWith(`/${normalizedName}.js`) ||
-                                normalizedFile.endsWith(`\\${normalizedName}.tsx`) ||
-                                normalizedFile.endsWith(`\\${normalizedName}.ts`) ||
-                                normalizedFile.endsWith(`\\${normalizedName}.jsx`) ||
-                                normalizedFile.endsWith(`\\${normalizedName}.js`) ||
-                                filenameWithoutExt === normalizedName;
-        
+        const nameMatchesFile =
+          normalizedFile.includes(`/${normalizedName}`) ||
+          normalizedFile.includes(`\\${normalizedName}`) ||
+          normalizedFile.endsWith(`/${normalizedName}.tsx`) ||
+          normalizedFile.endsWith(`/${normalizedName}.ts`) ||
+          normalizedFile.endsWith(`/${normalizedName}.jsx`) ||
+          normalizedFile.endsWith(`/${normalizedName}.js`) ||
+          normalizedFile.endsWith(`\\${normalizedName}.tsx`) ||
+          normalizedFile.endsWith(`\\${normalizedName}.ts`) ||
+          normalizedFile.endsWith(`\\${normalizedName}.jsx`) ||
+          normalizedFile.endsWith(`\\${normalizedName}.js`) ||
+          filenameWithoutExt === normalizedName;
+
         // O(1) lookup using pre-built index instead of O(m) spread + some + includes
         const inProjectFilePaths = componentNameToFilesIndex.has(normalizedName);
 
         if (!nameMatchesFile && !inProjectFilePaths) {
           continue;
         }
-        
+
         // Deduplicate by component identity: use normalized name + normalized file path as unique key
         // This ensures that:
         // 1. The same component (same name, same file) appearing multiple times is only shown once
@@ -872,16 +873,16 @@ const buildFilteredStructure = (components, currentComponentName, elem) => {
         //    (e.g., components_left/Parent.jsx vs components_right/Parent.jsx)
         const normalizedFilePath = normalizePath(comp.file);
         const componentKey = `${normalizedName}:${normalizedFilePath}`;
-        
+
         if (seenComponents.has(componentKey)) {
           continue;
         }
-        
+
         seenComponents.add(componentKey);
         projectOwnedComponents.push(comp);
       } else {
         const componentKey = normalizedName;
-        
+
         if (seenComponents.has(componentKey)) {
           continue;
         }
@@ -892,43 +893,45 @@ const buildFilteredStructure = (components, currentComponentName, elem) => {
     }
 
     if (projectOwnedComponents.length > 0) {
-      const filteredPath = projectOwnedComponents.map(comp => comp.name);
+      const filteredPath = projectOwnedComponents.map((comp) => comp.name);
       const currentNameLower = currentComponentName.toLowerCase();
-      const pathContainsCurrent = filteredPath.some(name => name.toLowerCase() === currentNameLower);
-      
+      const pathContainsCurrent = filteredPath.some(
+        (name) => name.toLowerCase() === currentNameLower,
+      );
+
       let finalPath;
       if (!pathContainsCurrent) {
         finalPath = [...filteredPath, currentComponentName];
       } else {
         finalPath = filteredPath;
       }
-      
+
       // Remove consecutive duplicates of the same components before joining
       finalPath = removeConsecutiveDuplicates(finalPath);
       return finalPath.join(' -> ');
     }
-    
+
     return currentComponentName;
   }
-  
+
   const domPath = getDomPath(elem);
-  
+
   if (domPath.length > 0) {
     const currentNameLower = currentComponentName.toLowerCase();
-    const pathContainsCurrent = domPath.some(name => name.toLowerCase() === currentNameLower);
-    
+    const pathContainsCurrent = domPath.some((name) => name.toLowerCase() === currentNameLower);
+
     let finalPath;
     if (!pathContainsCurrent) {
       finalPath = [...domPath, currentComponentName];
     } else {
       finalPath = domPath;
     }
-    
+
     // Remove consecutive duplicates of the same components before joining
     finalPath = removeConsecutiveDuplicates(finalPath);
     return finalPath.join(' -> ');
   }
-  
+
   return currentComponentName;
 };
 
@@ -940,12 +943,12 @@ const buildFilteredStructure = (components, currentComponentName, elem) => {
  */
 const addAbsoluteComponentPath = (elem, xrayReactElem) => {
   const currentComponentName = xrayReactElem.getAttribute('data-xray-react-element-name') || '';
-  
+
   const components = getComponentsFromElement(elem);
-  
+
   const fullStructure = buildFullStructure(components, currentComponentName, elem);
   const filteredStructure = buildFilteredStructure(components, currentComponentName, elem);
-  
+
   xrayReactElem.setAttribute(constants.xrayReactCompPathAttr, fullStructure);
   xrayReactElem.setAttribute(constants.xrayReactFilteredCompPathAttr, filteredStructure);
 };
@@ -957,8 +960,10 @@ const addAbsoluteComponentPath = (elem, xrayReactElem) => {
 const onXrayReactMouseover = (event) => {
   const { target } = event;
   if (target.classList.contains(constants.xrayReactElemCN)) {
-    const componentsPath = target.getAttribute(constants.xrayReactFilteredCompPathAttr) || 
-                           target.getAttribute(constants.xrayReactCompPathAttr) || '';
+    const componentsPath =
+      target.getAttribute(constants.xrayReactFilteredCompPathAttr) ||
+      target.getAttribute(constants.xrayReactCompPathAttr) ||
+      '';
     const pathElement = document.querySelector('.xray-react-actions-wrapper .components-path');
     if (pathElement) {
       pathElement.innerHTML = componentsPath;
@@ -966,20 +971,19 @@ const onXrayReactMouseover = (event) => {
   }
 };
 
-
 /**
  * Toggles the xray-react overlay on/off
  */
 const toggleXrayReact = () => {
   const body = document.body;
-  
+
   if (body.classList.contains('xray-react-enabled')) {
     body.classList.remove('xray-react-enabled');
     const xrayReactElementsWrapper = document.querySelector(`.${constants.xrayReactWrapperCN}`);
     const xrayReactActionBar = document.querySelector('.xray-react-action-bar');
     const xrayReactStyleTag = document.querySelector('.xray-react-style-tag');
     const tempElements = document.querySelectorAll('.xray-react-element-temp');
-    
+
     if (xrayReactActionBar) {
       xrayReactActionBar.classList.remove('-simple-mode');
     }
@@ -988,8 +992,8 @@ const toggleXrayReact = () => {
     }
     if (xrayReactActionBar) xrayReactActionBar.remove();
     if (xrayReactStyleTag) xrayReactStyleTag.remove();
-    tempElements.forEach(el => el.remove());
-    
+    tempElements.forEach((el) => el.remove());
+
     body.removeEventListener('mouseover', onXrayReactMouseover);
   } else {
     body.classList.add('xray-react-enabled');
@@ -1003,7 +1007,7 @@ const toggleXrayReact = () => {
       styleElement.textContent = css;
       document.head.appendChild(styleElement);
     }
-    
+
     const existingActionBar = document.querySelector('.xray-react-action-bar');
     if (!existingActionBar) {
       body.insertAdjacentHTML('beforeend', actionBar);
@@ -1037,12 +1041,12 @@ const toggleXrayReact = () => {
       clearButton.addEventListener('click', handleSearchClear);
     }
     body.addEventListener('mouseover', onXrayReactMouseover);
-    
+
     const existingWrapper = document.querySelector(`.${constants.xrayReactWrapperCN}`);
     if (existingWrapper) {
       existingWrapper.remove();
     }
-    
+
     const xrayReactElementsWrapper = document.createElement('div');
     xrayReactElementsWrapper.className = constants.xrayReactWrapperCN;
     if (currentMode === UI_MODE_SIMPLE) {
@@ -1056,8 +1060,8 @@ const toggleXrayReact = () => {
       }
     }
     const existingLoading = document.querySelectorAll('.xray-react-element-temp');
-    existingLoading.forEach(el => el.remove());
-    
+    existingLoading.forEach((el) => el.remove());
+
     const loadingElement = document.createElement('div');
     loadingElement.className = 'xray-react-element xray-react-element-temp';
     loadingElement.style.height = `${window.innerHeight}px`;
@@ -1067,22 +1071,24 @@ const toggleXrayReact = () => {
     loadingElement.style.zIndex = '10000';
     loadingElement.innerHTML = '<div class="xray-react-spinner xray-react-element-temp"></div>';
     xrayReactElementsWrapper.appendChild(loadingElement);
-    
+
     // Performance improvements
     const processElementsAsync = () => {
       const xrayReactObjects = [];
       const searchAndCreateComponent = searchAndCreateComponentCached();
-      const allElements = Array.from(body.getElementsByTagName('*')).filter(elem => {
-        return !elem.classList.contains('xray-react-element-temp') &&
-               !elem.closest('.xray-react-action-bar') &&
-               !elem.closest(`.${constants.xrayReactWrapperCN}`);
+      const allElements = Array.from(body.getElementsByTagName('*')).filter((elem) => {
+        return (
+          !elem.classList.contains('xray-react-element-temp') &&
+          !elem.closest('.xray-react-action-bar') &&
+          !elem.closest(`.${constants.xrayReactWrapperCN}`)
+        );
       });
       const batchSize = 20;
       let index = 0;
-      
+
       const processBatch = () => {
         const endIndex = Math.min(index + batchSize, allElements.length);
-        
+
         for (let i = index; i < endIndex; i++) {
           const elem = allElements[i];
           const xrayReactObj = searchAndCreateComponent(elem);
@@ -1090,44 +1096,44 @@ const toggleXrayReact = () => {
             xrayReactObjects.push(xrayReactObj);
           }
         }
-        
+
         index = endIndex;
-        
+
         if (index < allElements.length) {
           setTimeout(processBatch, 1);
         } else {
           let pathIndex = 0;
           const pathBatchSize = 10;
-          
+
           const processPaths = () => {
             const endIndex = Math.min(pathIndex + pathBatchSize, xrayReactObjects.length);
-            
+
             for (let i = pathIndex; i < endIndex; i++) {
               const { elem, xrayReactElem } = xrayReactObjects[i];
               addAbsoluteComponentPath(elem, xrayReactElem);
             }
-            
+
             pathIndex = endIndex;
-            
+
             if (pathIndex < xrayReactObjects.length) {
               setTimeout(processPaths, 1);
             } else {
               const wrapper = document.querySelector(`.${constants.xrayReactWrapperCN}`);
               if (wrapper) {
                 const tempElements = wrapper.querySelectorAll('.xray-react-element-temp');
-                tempElements.forEach(el => el.remove());
-                wrapper.append(...xrayReactObjects.map(obj => obj.xrayReactElem));
+                tempElements.forEach((el) => el.remove());
+                wrapper.append(...xrayReactObjects.map((obj) => obj.xrayReactElem));
               }
             }
           };
-          
+
           setTimeout(processPaths, 1);
         }
       };
-      
+
       setTimeout(processBatch, 1);
     };
-    
+
     processElementsAsync();
   }
 };
@@ -1149,12 +1155,12 @@ const createKeydownHandler = () => {
       }
       return;
     }
-    
+
     const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
     const isMetaOrCtrl = isMac ? event.metaKey : event.ctrlKey;
     const isShift = event.shiftKey;
     const isX = event.key === 'x' || event.key === 'X' || event.keyCode === 88;
-    
+
     if (isMetaOrCtrl && isShift && isX) {
       toggleXrayReact();
       event.preventDefault();
@@ -1171,11 +1177,11 @@ const handleXrayReactToggle = () => {
   if (isHandlerRegistered) {
     return;
   }
-  
+
   if (!keydownHandler) {
     keydownHandler = createKeydownHandler();
   }
-  
+
   document.addEventListener('keydown', keydownHandler, true);
   isHandlerRegistered = true;
 };
