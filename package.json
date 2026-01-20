@@ -22,7 +22,9 @@
   "lint-staged": {
     "*.{js,mjs}": [
       "prettier --write",
-      "eslint --fix"
+      "eslint --fix",
+      "bash -c 'npx rollup -c'",
+      "bash -c 'git add build/'"
     ]
   },
   "engines": {
