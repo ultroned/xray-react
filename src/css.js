@@ -10,6 +10,12 @@ export default `
     position: absolute;
     right: 0;
     top: 0;
+    min-height: 100vh;
+    height: 100%;
+  }
+  html.xray-react-enabled,
+  html.xray-react-enabled body {
+    height: 100%;
   }
   .xray-react-element {
     background-color: rgba(0, 0, 255, 0.25);
@@ -161,11 +167,6 @@ export default `
   @keyframes xray-react-spin {
     to { transform: rotate(360deg); }
   }
-  /* Simple mode styles */
-  .xray-react-elements-wrapper.-simple-mode {
-    border: 2px solid blue;
-    box-sizing: border-box;
-  }
   .xray-react-elements-wrapper.-simple-mode .xray-react-element {
     opacity: 0;
     pointer-events: auto;
@@ -173,7 +174,7 @@ export default `
   .xray-react-elements-wrapper.-simple-mode .xray-react-element:hover {
     opacity: 1;
   }
-  .xray-react-action-bar.-simple-mode #search-component {
-    display: none;
+  .xray-react-elements-wrapper.-simple-mode .xray-react-element.-highlighted {
+    opacity: 1;
   }
 `;

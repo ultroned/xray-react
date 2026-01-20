@@ -954,7 +954,15 @@ const toggleXrayReact = () => {
     if (xrayReactActionBar) {
       xrayReactActionBar.classList.remove('-simple-mode');
     }
-    if (xrayReactElementsWrapper) xrayReactElementsWrapper.remove();
+    if (xrayReactElementsWrapper) {
+      if (xrayReactElementsWrapper._heightObserver) {
+        xrayReactElementsWrapper._heightObserver.disconnect();
+      }
+      if (xrayReactElementsWrapper._heightUpdate) {
+        window.removeEventListener('resize', xrayReactElementsWrapper._heightUpdate);
+      }
+      xrayReactElementsWrapper.remove();
+    }
     if (xrayReactActionBar) xrayReactActionBar.remove();
     if (xrayReactStyleTag) xrayReactStyleTag.remove();
     tempElements.forEach(el => el.remove());
@@ -1004,6 +1012,22 @@ const toggleXrayReact = () => {
     xrayReactElementsWrapper.className = constants.xrayReactWrapperCN;
     if (currentMode === UI_MODE_SIMPLE) {
       xrayReactElementsWrapper.classList.add('-simple-mode');
+      const updateWrapperHeight = () => {
+        const docHeight = Math.max(
+          document.body.scrollHeight,
+          document.body.offsetHeight,
+          document.documentElement.clientHeight,
+          document.documentElement.scrollHeight,
+          document.documentElement.offsetHeight
+        );
+        xrayReactElementsWrapper.style.height = `${docHeight}px`;
+      };
+      updateWrapperHeight();
+      window.addEventListener('resize', updateWrapperHeight);
+      const observer = new MutationObserver(updateWrapperHeight);
+      observer.observe(document.body, { childList: true, subtree: true, attributes: true });
+      xrayReactElementsWrapper._heightObserver = observer;
+      xrayReactElementsWrapper._heightUpdate = updateWrapperHeight;
     }
     body.append(xrayReactElementsWrapper);
     if (currentMode === UI_MODE_SIMPLE) {
