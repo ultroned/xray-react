@@ -3,7 +3,9 @@
 X-Ray React
 ==========
 
-[![npm version](https://badge.fury.io/js/xray-react.svg)](https://www.npmjs.com/package/xray-react)
+[![npm version](https://badgen.net/npm/v/xray-react?color=green&cache=3600)](https://www.npmjs.com/package/xray-react)
+[![downloads](https://badgen.net/npm/dt/xray-react?cache=300)](https://www.npmjs.com/package/xray-react)
+[![license](https://badgen.net/github/license/ultroned/xray-react)](https://github.com/ultroned/xray-react/blob/main/LICENSE)
 
 React UI layout debugging tool inspired by [Xray-rails](https://github.com/brentd/xray-rails)
 
