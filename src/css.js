@@ -10,12 +10,6 @@ export default `
     position: absolute;
     right: 0;
     top: 0;
-    min-height: 100vh;
-    height: 100%;
-  }
-  html.xray-react-enabled,
-  html.xray-react-enabled body {
-    height: 100%;
   }
   .xray-react-element {
     background-color: rgba(0, 0, 255, 0.25);
