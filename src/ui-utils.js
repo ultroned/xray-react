@@ -1,6 +1,7 @@
 import * as constants from './constants.js';
 import { styleTag, actionBar } from './partials.js';
 import css from './css.js';
+import { UI_MODE_FULL, UI_MODE_SIMPLE, AVAILABLE_UI_MODES } from './constants.js';
 
 const MAX_FIBER_DEPTH = 50; // Prevent infinite loops
 
@@ -11,6 +12,7 @@ let projectFilePaths = new Set();
 let normalizedProjectFilePaths = new Set();           // Pre-normalized paths for O(1) lookup
 let componentNameToFilesIndex = new Map();            // componentName -> Set<filePath> for O(1) lookup
 const normalizePathCache = new Map();                 // Memoization cache for normalizePath
+let currentMode = UI_MODE_FULL;
 
 const EXTERNAL_PATTERNS = [
   /node_modules/i,
@@ -114,13 +116,27 @@ const removeConsecutiveDuplicates = (path) => {
 };
 
 /**
+ * Updates the clear button visibility based on input value
+ * @param {HTMLInputElement} input - Search input element
+ */
+const updateClearButton = (input) => {
+  const clearButton = input?.parentElement?.querySelector('.search-clear');
+  if (clearButton) {
+    clearButton.style.display = input.value.length > 0 ? 'flex' : 'none';
+  }
+};
+
+/**
  * Handles search input changes to highlight matching components
  * @param {Event} event - Input event
  */
 const handleSearchChange = (event) => {
-  const value = event.target.value.toLowerCase();
+  const input = event.target;
+  const value = input.value.toLowerCase();
   const regExp = new RegExp(`^${value}|${value}$`);
   const elements = document.querySelectorAll(`.${constants.xrayReactElemCN}`);
+  
+  updateClearButton(input);
   
   for (const elem of elements) {
     if (value.length >= 2) {
@@ -134,6 +150,52 @@ const handleSearchChange = (event) => {
       elem.classList.remove('-highlighted');
     }
   }
+};
+
+/**
+ * Handles clear button click to reset search
+ * @param {Event} event - Click event
+ */
+const handleSearchClear = (event) => {
+  const input = document.getElementById('search-component');
+  if (input) {
+    input.value = '';
+    input.focus();
+    updateClearButton(input);
+    const elements = document.querySelectorAll(`.${constants.xrayReactElemCN}`);
+    elements.forEach(elem => elem.classList.remove('-highlighted'));
+  }
+};
+
+/**
+ * Gets the current mode from window or defaults to UI_MODE_FULL
+ * @returns {string} Current mode (UI_MODE_FULL or UI_MODE_SIMPLE)
+ */
+const getCurrentMode = () => {
+  if (typeof window !== 'undefined' && window.__XRAY_REACT_MODE__) {
+    const mode = window.__XRAY_REACT_MODE__;
+    return AVAILABLE_UI_MODES.includes(mode) ? mode : UI_MODE_FULL;
+  }
+  return UI_MODE_FULL;
+};
+
+/**
+ * Sets the current mode
+ * @param {string} mode - Mode to set (UI_MODE_FULL or UI_MODE_SIMPLE)
+ */
+export const setMode = (mode) => {
+  currentMode = AVAILABLE_UI_MODES.includes(mode) ? mode : UI_MODE_FULL;
+  if (typeof window !== 'undefined') {
+    window.__XRAY_REACT_MODE__ = currentMode;
+  }
+};
+
+/**
+ * Gets the current mode
+ * @returns {string} Current mode
+ */
+export const getMode = () => {
+  return currentMode;
 };
 
 /**
@@ -904,6 +966,7 @@ const onXrayReactMouseover = (event) => {
   }
 };
 
+
 /**
  * Toggles the xray-react overlay on/off
  */
@@ -917,7 +980,12 @@ const toggleXrayReact = () => {
     const xrayReactStyleTag = document.querySelector('.xray-react-style-tag');
     const tempElements = document.querySelectorAll('.xray-react-element-temp');
     
-    if (xrayReactElementsWrapper) xrayReactElementsWrapper.remove();
+    if (xrayReactActionBar) {
+      xrayReactActionBar.classList.remove('-simple-mode');
+    }
+    if (xrayReactElementsWrapper) {
+      xrayReactElementsWrapper.remove();
+    }
     if (xrayReactActionBar) xrayReactActionBar.remove();
     if (xrayReactStyleTag) xrayReactStyleTag.remove();
     tempElements.forEach(el => el.remove());
@@ -925,7 +993,9 @@ const toggleXrayReact = () => {
     body.removeEventListener('mouseover', onXrayReactMouseover);
   } else {
     body.classList.add('xray-react-enabled');
-    
+
+    currentMode = getCurrentMode();
+
     let styleElement = document.querySelector('.xray-react-style-tag');
     if (!styleElement) {
       styleElement = document.createElement('style');
@@ -937,11 +1007,34 @@ const toggleXrayReact = () => {
     const existingActionBar = document.querySelector('.xray-react-action-bar');
     if (!existingActionBar) {
       body.insertAdjacentHTML('beforeend', actionBar);
+    } else {
+      const existingClearButton = existingActionBar.querySelector('.search-clear');
+      if (existingClearButton && !existingClearButton.hasAttribute('data-listener-attached')) {
+        existingClearButton.setAttribute('data-listener-attached', 'true');
+        existingClearButton.addEventListener('click', handleSearchClear);
+      }
     }
-    
+    if (currentMode === UI_MODE_SIMPLE && existingActionBar) {
+      existingActionBar.classList.add('-simple-mode');
+    } else if (currentMode === UI_MODE_SIMPLE && !existingActionBar) {
+      setTimeout(() => {
+        const actionBar = document.querySelector('.xray-react-action-bar');
+        if (actionBar) {
+          actionBar.classList.add('-simple-mode');
+        }
+      }, 0);
+    } else if (currentMode !== UI_MODE_SIMPLE && existingActionBar) {
+      existingActionBar.classList.remove('-simple-mode');
+    }
     const searchInput = document.getElementById('search-component');
     if (searchInput) {
       searchInput.addEventListener('input', handleSearchChange);
+      updateClearButton(searchInput);
+    }
+    const clearButton = document.querySelector('.search-clear');
+    if (clearButton && !clearButton.hasAttribute('data-listener-attached')) {
+      clearButton.setAttribute('data-listener-attached', 'true');
+      clearButton.addEventListener('click', handleSearchClear);
     }
     body.addEventListener('mouseover', onXrayReactMouseover);
     
@@ -952,8 +1045,16 @@ const toggleXrayReact = () => {
     
     const xrayReactElementsWrapper = document.createElement('div');
     xrayReactElementsWrapper.className = constants.xrayReactWrapperCN;
+    if (currentMode === UI_MODE_SIMPLE) {
+      xrayReactElementsWrapper.classList.add('-simple-mode');
+    }
     body.append(xrayReactElementsWrapper);
-    
+    if (currentMode === UI_MODE_SIMPLE) {
+      const actionBar = document.querySelector('.xray-react-action-bar');
+      if (actionBar) {
+        actionBar.classList.add('-simple-mode');
+      }
+    }
     const existingLoading = document.querySelectorAll('.xray-react-element-temp');
     existingLoading.forEach(el => el.remove());
     
@@ -1083,6 +1184,8 @@ const handleXrayReactToggle = () => {
  * Enables xray-react functionality
  */
 export const enableXrayReact = () => {
+  currentMode = getCurrentMode();
+
   if (!projectRoot) {
     if (typeof window !== 'undefined' && window.__XRAY_REACT_PROJECT_ROOT__) {
       projectRoot = normalizePath(window.__XRAY_REACT_PROJECT_ROOT__);
@@ -1092,7 +1195,7 @@ export const enableXrayReact = () => {
       }, 1000);
     }
   }
-  
+
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', handleXrayReactToggle);
   } else {

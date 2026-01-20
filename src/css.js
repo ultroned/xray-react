@@ -98,20 +98,44 @@ export default `
     top: 0;
     width: 100%;
   }
-  #search-component {
+  .search-wrapper {
+    position: relative;
     align-self: center;
+    flex-shrink: 0;
+    margin-right: 15px;
+    min-width: 200px;
+    width: 25%;
+  }
+  #search-component {
     background-color: lightgray;
     border-radius: 3px;
     border: 0;
-    flex-shrink: 0;
     font-size: 14px;
     height: 30px;
     line-height: 20px;
-    margin-right: 15px;
-    min-width: 200px;
     outline: 0;
-    padding: 5px 10px;
-    width: 25%;
+    padding: 5px 30px 5px 10px;
+    width: 100%;
+    box-sizing: border-box;
+  }
+  .search-clear {
+    position: absolute;
+    right: 4px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #666;
+    opacity: 0.6;
+    transition: opacity 0.2s;
+  }
+  .search-clear:hover {
+    opacity: 1;
   }
   .components-path {
     color: cyan;
@@ -160,5 +184,15 @@ export default `
   }
   @keyframes xray-react-spin {
     to { transform: rotate(360deg); }
+  }
+  .xray-react-elements-wrapper.-simple-mode .xray-react-element {
+    opacity: 0;
+    pointer-events: auto;
+  }
+  .xray-react-elements-wrapper.-simple-mode .xray-react-element:hover {
+    opacity: 1;
+  }
+  .xray-react-elements-wrapper.-simple-mode .xray-react-element.-highlighted {
+    opacity: 1;
   }
 `;
