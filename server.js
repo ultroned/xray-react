@@ -44,12 +44,12 @@ function detectProjectRoot(startPath = process.cwd()) {
       console.warn(`xray-react: XRAY_REACT_PROJECT_ROOT path does not exist: ${envRoot}`);
     }
   }
-  
+
   const packageJsonRoot = detectProjectRootByPackageJson(startPath);
   if (packageJsonRoot) {
     return packageJsonRoot;
   }
-  
+
   return startPath;
 }
 
@@ -71,44 +71,40 @@ function getProjectRoot() {
  * Uses priority system to prefer component files over style/test files
  */
 function buildSourceMap() {
-  Object.keys(sources).forEach(key => delete sources[key]);
-  
+  Object.keys(sources).forEach((key) => delete sources[key]);
+
   if (sourcePaths.length === 0) {
     const root = getProjectRoot();
     sourcePaths = detectSourcePaths(root);
   }
-  
+
   const mappings = new Map(); // component name -> Array of { filePath, context, priority }
-  
+
   const root = getProjectRoot();
-  
-  sourcePaths.forEach(sourcePath => {
+
+  sourcePaths.forEach((sourcePath) => {
     if (!fs.existsSync(sourcePath)) {
       console.warn(`xray-react: Source path not found: ${sourcePath}`);
       return;
     }
-    
+
     const files = scanSourceFiles(sourcePath);
-    
-    files.forEach(filePath => {
+
+    files.forEach((filePath) => {
       const componentNames = extractComponentNames(filePath);
       const priority = getFilePriority(filePath);
       const context = extractComponentContext(filePath, root);
-      
-      componentNames.forEach(name => {
+
+      componentNames.forEach((name) => {
         if (!mappings.has(name)) {
           mappings.set(name, []);
         }
-        
-        mappings.get(name).push({
-          path: filePath,
-          context: context,
-          priority: priority
-        });
+
+        mappings.get(name).push({ path: filePath, context: context, priority: priority });
       });
     });
   });
-  
+
   mappings.forEach((candidates, name) => {
     sources[name] = candidates;
   });
@@ -120,18 +116,18 @@ function buildSourceMap() {
  */
 function collectAllProjectFiles() {
   allProjectFiles = [];
-  
+
   if (sourcePaths.length === 0) {
     const root = getProjectRoot();
     sourcePaths = detectSourcePaths(root);
   }
-  
-  sourcePaths.forEach(sourcePath => {
+
+  sourcePaths.forEach((sourcePath) => {
     if (!fs.existsSync(sourcePath)) {
       console.warn(`xray-react: Source path not found: ${sourcePath}`);
       return;
     }
-    
+
     const files = scanSourceFiles(sourcePath);
     allProjectFiles.push(...files);
   });
@@ -142,13 +138,13 @@ function collectAllProjectFiles() {
  * Maps file path to Set of component names used in JSX
  */
 function buildUsageMapForServer() {
-  Object.keys(usageMap).forEach(key => delete usageMap[key]);
-  
+  Object.keys(usageMap).forEach((key) => delete usageMap[key]);
+
   if (sourcePaths.length === 0) {
     const root = getProjectRoot();
     sourcePaths = detectSourcePaths(root);
   }
-  
+
   const builtMap = buildUsageMap(sourcePaths);
   Object.assign(usageMap, builtMap);
 }
@@ -158,13 +154,13 @@ function buildUsageMapForServer() {
  * Maps file path to Set of imported component names (fallback for usage map)
  */
 function buildImportMapForServer() {
-  Object.keys(importMap).forEach(key => delete importMap[key]);
-  
+  Object.keys(importMap).forEach((key) => delete importMap[key]);
+
   if (sourcePaths.length === 0) {
     const root = getProjectRoot();
     sourcePaths = detectSourcePaths(root);
   }
-  
+
   const builtMap = buildImportMap(sourcePaths);
   Object.assign(importMap, builtMap);
 }
@@ -176,12 +172,7 @@ buildUsageMapForServer();
 buildImportMapForServer();
 
 const httpServer = createServer();
-const serverIO = new Server(httpServer, {
-  cors: {
-    origin: '*',
-    methods: ['GET', 'POST']
-  }
-});
+const serverIO = new Server(httpServer, { cors: { origin: '*', methods: ['GET', 'POST'] } });
 
 serverIO.on('connection', (socket) => {
   const root = getProjectRoot();
@@ -189,26 +180,26 @@ serverIO.on('connection', (socket) => {
   socket.emit('usage-map', { usage: usageMap });
   socket.emit('import-map', { imports: importMap });
   socket.emit('project-files', { files: allProjectFiles });
-  
+
   socket.on('xray-react-component', (structure) => {
     if (structure) {
-      const hierarchy = structure.split(' -> ').map(name => name.trim());
+      const hierarchy = structure.split(' -> ').map((name) => name.trim());
       const componentNames = [...hierarchy].reverse(); // Try from leaf to root
-      
+
       for (const name of componentNames) {
         const trimmedName = name.trim();
         const filepath = findComponentFile(trimmedName, hierarchy, sources);
-        
+
         if (filepath && fs.existsSync(filepath)) {
           openFile(filepath);
           return;
         }
       }
-      
+
       console.warn(`xray-react: No file found for components: ${componentNames.join(', ')}`);
     }
   });
-  
+
   socket.on('register-source', (data) => {
     if (data.name && data.path) {
       if (!sources[data.name]) {
@@ -217,15 +208,11 @@ serverIO.on('connection', (socket) => {
       if (Array.isArray(sources[data.name])) {
         const priority = getFilePriority(data.path);
         const context = extractComponentContext(data.path, getProjectRoot());
-        sources[data.name].push({
-          path: data.path,
-          context: context,
-          priority: priority
-        });
+        sources[data.name].push({ path: data.path, context: context, priority: priority });
       }
     }
   });
-  
+
   socket.on('rebuild-source-map', () => {
     buildSourceMap();
     socket.emit('source-map-rebuilt', { count: Object.keys(sources).length });

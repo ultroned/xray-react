@@ -16,7 +16,14 @@
     "dev": "node index.js",
     "build": "rollup -c",
     "prepublish": "rollup -c",
-    "server": "node server.js"
+    "server": "node server.js",
+    "prepare": "husky"
+  },
+  "lint-staged": {
+    "*.{js,mjs}": [
+      "prettier --write",
+      "eslint --fix"
+    ]
   },
   "engines": {
     "node": ">=22.0.0"
@@ -61,6 +68,11 @@
   "devDependencies": {
     "@rollup/plugin-commonjs": "^28.0.1",
     "@rollup/plugin-node-resolve": "^15.3.0",
+    "eslint": "^9.39.2",
+    "eslint-plugin-import": "^2.32.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.2.7",
+    "prettier": "^3.8.0",
     "rollup": "^4.22.0"
   },
   "dependencies": {
