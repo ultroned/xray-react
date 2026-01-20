@@ -116,13 +116,27 @@ const removeConsecutiveDuplicates = (path) => {
 };
 
 /**
+ * Updates the clear button visibility based on input value
+ * @param {HTMLInputElement} input - Search input element
+ */
+const updateClearButton = (input) => {
+  const clearButton = input?.parentElement?.querySelector('.search-clear');
+  if (clearButton) {
+    clearButton.style.display = input.value.length > 0 ? 'flex' : 'none';
+  }
+};
+
+/**
  * Handles search input changes to highlight matching components
  * @param {Event} event - Input event
  */
 const handleSearchChange = (event) => {
-  const value = event.target.value.toLowerCase();
+  const input = event.target;
+  const value = input.value.toLowerCase();
   const regExp = new RegExp(`^${value}|${value}$`);
   const elements = document.querySelectorAll(`.${constants.xrayReactElemCN}`);
+  
+  updateClearButton(input);
   
   for (const elem of elements) {
     if (value.length >= 2) {
@@ -135,6 +149,21 @@ const handleSearchChange = (event) => {
     } else {
       elem.classList.remove('-highlighted');
     }
+  }
+};
+
+/**
+ * Handles clear button click to reset search
+ * @param {Event} event - Click event
+ */
+const handleSearchClear = (event) => {
+  const input = document.getElementById('search-component');
+  if (input) {
+    input.value = '';
+    input.focus();
+    updateClearButton(input);
+    const elements = document.querySelectorAll(`.${constants.xrayReactElemCN}`);
+    elements.forEach(elem => elem.classList.remove('-highlighted'));
   }
 };
 
@@ -984,6 +1013,12 @@ const toggleXrayReact = () => {
     const existingActionBar = document.querySelector('.xray-react-action-bar');
     if (!existingActionBar) {
       body.insertAdjacentHTML('beforeend', actionBar);
+    } else {
+      const existingClearButton = existingActionBar.querySelector('.search-clear');
+      if (existingClearButton && !existingClearButton.hasAttribute('data-listener-attached')) {
+        existingClearButton.setAttribute('data-listener-attached', 'true');
+        existingClearButton.addEventListener('click', handleSearchClear);
+      }
     }
     if (currentMode === UI_MODE_SIMPLE && existingActionBar) {
       existingActionBar.classList.add('-simple-mode');
@@ -1000,6 +1035,12 @@ const toggleXrayReact = () => {
     const searchInput = document.getElementById('search-component');
     if (searchInput) {
       searchInput.addEventListener('input', handleSearchChange);
+      updateClearButton(searchInput);
+    }
+    const clearButton = document.querySelector('.search-clear');
+    if (clearButton && !clearButton.hasAttribute('data-listener-attached')) {
+      clearButton.setAttribute('data-listener-attached', 'true');
+      clearButton.addEventListener('click', handleSearchClear);
     }
     body.addEventListener('mouseover', onXrayReactMouseover);
     
