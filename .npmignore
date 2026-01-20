@@ -1,2 +1,14 @@
+# Development config files
+rollup.config.js
+eslint.config.js
+prettier.config.js
+.prettierignore
+.gitignore
+.husky/
+
 # Examples and other media files
-media
+media/
+
+# OS files
+.DS_Store
+*.log

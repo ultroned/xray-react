@@ -1,0 +1,9 @@
+# Dependencies
+node_modules/
+
+# Build output
+build/
+*.min.js
+
+# Config files
+*.config.js

@@ -1,0 +1,1 @@
+npx lint-staged --relative --no-revert --allow-empty
