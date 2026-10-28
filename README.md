@@ -25,7 +25,7 @@ Xray-react is a development tool that reveals your React UI's component structur
 
 - **React 18 & 19 Support** - Works with React 18+ (including React 19, which no longer exposes `_debugSource`) using React DevTools protocol, with fallback support for React <18
 - **Multi-Bundler Support** - Works with Webpack and Vite
-- **TypeScript Support** - Supports `.js`, `.jsx`, `.ts`, and `.tsx` files
+- **TypeScript Support** - Supports `.js`, `.jsx`, `.ts`, and `.tsx` files, and ships type declarations for the plugins
 - **Smart Component Filtering** - Automatically filters out external library components, showing only your project's components
 - **Component Hierarchy Display** - Shows full component path from parent to child (e.g., `Page -> Layout -> Component`)
 - **Modern UI** - Clean overlay interface with component search and scrollable component paths
@@ -36,6 +36,7 @@ Xray-react is a development tool that reveals your React UI's component structur
 
 - **Node.js**: >= 22.0.0
 - **React**: >= 18.0.0 (including React 19)
+- **Vite**: >= 5.0.0 (tested with Vite 8) or **Webpack**: >= 5.0.0
 
 ## Installation
 
@@ -97,7 +98,7 @@ export default defineConfig(({ mode }) => ({
 }));
 ```
 
-The plugin only runs in `vite dev` (`apply: 'serve'`), so `vite build` (including `vite build --mode development`) is unaffected.
+The plugin also works in `vite.config.ts`; type declarations are included. It only runs in `vite dev` (`apply: 'serve'`), so `vite build` (including `vite build --mode development`) is unaffected.
 
 ### Next.js
 
