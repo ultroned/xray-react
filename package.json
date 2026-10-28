@@ -17,7 +17,8 @@
   "scripts": {
     "dev": "node index.js",
     "build": "rollup -c",
-    "prepublish": "rollup -c",
+    "lint": "eslint .",
+    "prepublishOnly": "rollup -c",
     "server": "node server.js",
     "prepare": "husky"
   },
