@@ -97,6 +97,8 @@ export default defineConfig(({ mode }) => ({
 }));
 ```
 
+The plugin only runs in `vite dev` (`apply: 'serve'`), so `vite build` (including `vite build --mode development`) is unaffected.
+
 ### Next.js
 
 For Next.js applications, you can use either the webpack plugin or manual imports.
