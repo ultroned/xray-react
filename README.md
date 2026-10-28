@@ -176,8 +176,6 @@ The server will:
 - Start Socket.IO server for file opening
 - Send project configuration to connected clients
 
-**Note:** The client bundle dynamically loads Socket.IO from a CDN, so an internet connection is required for file opening functionality.
-
 ## Configuration
 
 ### Environment Variables
@@ -293,14 +291,13 @@ You can also specify a custom editor using the `XRAY_REACT_EDITOR` environment v
 - Check that `XRAY_REACT_EDITOR` or another editor environment variable is set
 - Check the browser console for Socket.IO connection errors
 - For standalone server: ensure it's running and connected (check browser console)
-- Ensure you have an internet connection (Socket.IO is loaded from CDN)
 
 ### Socket.IO connection errors
 
 - Check that the server started successfully (look for server startup messages in console)
 - Verify CORS settings if using a different origin
 - For standalone server: ensure it's running before opening your app
-- Check your internet connection (Socket.IO client is loaded from CDN)
+- If the dev server runs in Docker, publish the Socket.IO port (default `8124`); file opening runs on the machine where the server runs
 
 ### Duplicate component names opening wrong file
 
