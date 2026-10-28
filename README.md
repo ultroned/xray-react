@@ -23,7 +23,7 @@ Xray-react is a development tool that reveals your React UI's component structur
 
 ## Features
 
-- **React 18+ Support** - Works with React 18+ using React DevTools protocol, with fallback support for React <18
+- **React 18 & 19 Support** - Works with React 18+ (including React 19, which no longer exposes `_debugSource`) using React DevTools protocol, with fallback support for React <18
 - **Multi-Bundler Support** - Works with Webpack and Vite
 - **TypeScript Support** - Supports `.js`, `.jsx`, `.ts`, and `.tsx` files
 - **Smart Component Filtering** - Automatically filters out external library components, showing only your project's components
@@ -35,7 +35,7 @@ Xray-react is a development tool that reveals your React UI's component structur
 ## Requirements
 
 - **Node.js**: >= 22.0.0
-- **React**: >= 16.0.0 (React 18+ recommended for best experience)
+- **React**: >= 18.0.0 (including React 19)
 
 ## Installation
 

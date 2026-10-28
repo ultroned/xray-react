@@ -6,6 +6,7 @@ import { UI_MODE_FULL, UI_MODE_SIMPLE, AVAILABLE_UI_MODES } from './constants.js
 const MAX_FIBER_DEPTH = 50; // Prevent infinite loops
 
 let projectRoot = null;
+let projectRootPath = null; // Original (non-normalized) root, used to build absolute file paths
 let usageMap = {};
 let importMap = {};
 let projectFilePaths = new Set();
@@ -224,7 +225,72 @@ const createElemForComponent = (elem, componentName) => {
  */
 const isHTMLElement = (name) => {
   if (!name || typeof name !== 'string') return false;
-  return constants.HTML_ELEMENTS.has(name.toLowerCase());
+  // Case-sensitive: host elements are lowercase, while `Input`, `Button`, etc. are components
+  return constants.HTML_ELEMENTS.has(name);
+};
+
+const debugStackUrls = new WeakMap();
+
+/**
+ * Extracts the JSX call-site URL from a React 19+ fiber._debugStack
+ * @param {Error} debugStack - Error captured by React when the element was created
+ * @returns {string|null} Source URL without query and position or null
+ */
+const getDebugStackUrl = (debugStack) => {
+  if (debugStack === null || typeof debugStack !== 'object') return null;
+  if (debugStackUrls.has(debugStack)) return debugStackUrls.get(debugStack);
+
+  let url = null;
+  const lines = String(debugStack.stack || '').split('\n');
+  for (const line of lines) {
+    // Skip the synthetic top frame and React's own jsx runtime frames
+    if (!/:\d+:\d+\)?\s*$/.test(line) || /jsx-?(dev-)?runtime|react_jsx/i.test(line)) continue;
+    // Chrome: "at fn (url:1:2)" or "at url:1:2"; Firefox/Safari: "fn@url:1:2"
+    const match =
+      line.match(/\((\S+?):\d+:\d+\)\s*$/) ||
+      line.match(/^\s*at\s+(\S+?):\d+:\d+\s*$/) ||
+      line.match(/^[^@\s]*@(\S+?):\d+:\d+\s*$/);
+    if (match) {
+      url = match[1].split('?')[0];
+      break;
+    }
+  }
+
+  debugStackUrls.set(debugStack, url);
+  return url;
+};
+
+/**
+ * Gets the file where a fiber's JSX element was created
+ * Uses _debugSource (React <19) or parses _debugStack (React 19+)
+ * @param {Object} fiber - React fiber node
+ * @returns {string|null} File path (absolute when project root is known) or null
+ */
+const getDebugFileName = (fiber) => {
+  if (!fiber) return null;
+  if (fiber._debugSource?.fileName) return fiber._debugSource.fileName;
+
+  const url = getDebugStackUrl(fiber._debugStack);
+  if (!url) return null;
+
+  if (url.startsWith('webpack-internal:///')) {
+    return url.replace('webpack-internal:///', '').replace(/^\([^)]*\)\//, '');
+  }
+
+  try {
+    const { origin, pathname } = new URL(url);
+    const filePath = decodeURIComponent(pathname);
+    if (typeof window !== 'undefined' && origin !== window.location.origin) {
+      return filePath;
+    }
+    // Vite serves files outside its root as /@fs/<absolute path>
+    if (filePath.startsWith('/@fs/')) {
+      return filePath.slice('/@fs'.length);
+    }
+    return projectRootPath ? `${projectRootPath}${filePath}` : filePath.slice(1);
+  } catch {
+    return url;
+  }
 };
 
 /**
@@ -260,13 +326,22 @@ const resolveComponentName = (elementType, fiber = null) => {
   }
 
   if (elementType && elementType.$$typeof) {
+    // forwardRef/memo objects carry their own displayName (e.g. shadcn/ui components)
+    if (elementType.displayName) {
+      return elementType.displayName;
+    }
+
+    if (elementType.render) {
+      return resolveComponentName(elementType.render, fiber);
+    }
+
     if (elementType.type) {
       return resolveComponentName(elementType.type, fiber);
     }
   }
 
   if (fiber && fiber._debugSource) {
-    const fileName = fiber._debugSource.fileName;
+    const fileName = getDebugFileName(fiber);
     if (fileName) {
       const match = fileName.match(/([^/\\]+)\.(jsx?|tsx?)$/);
       if (match) {
@@ -290,7 +365,7 @@ const isProjectComponent = (fiber, projectRootPath, componentName = null) => {
     return true;
   }
 
-  const filePath = fiber?._debugSource?.fileName;
+  const filePath = getDebugFileName(fiber);
 
   if (filePath) {
     if (isExternalPath(filePath)) {
@@ -331,10 +406,15 @@ const isProjectComponent = (fiber, projectRootPath, componentName = null) => {
  * @param {string} rootPath - Project root path
  */
 export const setProjectRoot = (rootPath) => {
-  projectRoot = rootPath ? normalizePath(rootPath) : null;
+  projectRootPath = rootPath || null;
 
-  if (typeof window !== 'undefined' && window.__XRAY_REACT_PROJECT_ROOT__ && !projectRoot) {
-    projectRoot = normalizePath(window.__XRAY_REACT_PROJECT_ROOT__);
+  if (typeof window !== 'undefined' && window.__XRAY_REACT_PROJECT_ROOT__ && !projectRootPath) {
+    projectRootPath = window.__XRAY_REACT_PROJECT_ROOT__;
+  }
+
+  projectRoot = projectRootPath ? normalizePath(projectRootPath) : null;
+  if (projectRootPath) {
+    projectRootPath = String(projectRootPath).replace(/[/\\]+$/, '');
   }
 };
 
@@ -525,6 +605,47 @@ const isUsedByInternalComponents = (componentName, seenInternalComponents) => {
 };
 
 /**
+ * Checks if a component was rendered directly by a project component
+ * Fallback for when no source file is known for the component itself
+ * @param {Object} fiber - React fiber node
+ * @returns {boolean} True if the fiber's owner is a project component
+ */
+const isOwnedByProjectComponent = (fiber) => {
+  const owner = fiber?._debugOwner;
+  if (!owner || typeof owner.tag !== 'number' || getDebugFileName(fiber)) {
+    return false;
+  }
+
+  const ownerName = resolveComponentName(owner.elementType || owner.type, owner);
+  return !!ownerName && isProjectComponent(owner, projectRoot, ownerName);
+};
+
+const fiberUids = new WeakMap();
+let nextFiberUid = 0;
+
+/**
+ * Gets a stable id for a component fiber, shared with its alternate
+ * React 19 dropped _debugID, and index/key alone collide across siblings
+ * @param {Object} fiber - React fiber node
+ * @returns {string|number} Fiber id
+ */
+const getFiberUid = (fiber) => {
+  if (fiber._debugID !== undefined) {
+    return fiber._debugID;
+  }
+
+  let uid = fiberUids.get(fiber) ?? (fiber.alternate ? fiberUids.get(fiber.alternate) : undefined);
+  if (uid === undefined) {
+    uid = `fiber-${nextFiberUid++}`;
+  }
+  fiberUids.set(fiber, uid);
+  if (fiber.alternate) {
+    fiberUids.set(fiber.alternate, uid);
+  }
+  return uid;
+};
+
+/**
  * Traverses the fiber tree to find React components, skipping HTML elements
  * Filters out external library components based on usage/import maps
  * @param {Object} fiber - Starting fiber node
@@ -554,10 +675,7 @@ const traverseFiberTree = (fiber, maxDepth = MAX_FIBER_DEPTH) => {
         if (!isHTMLElement(componentName)) {
           const isInternal = isProjectComponent(currentFiber, projectRoot, componentName);
 
-          let filePath = null;
-          if (currentFiber._debugSource && currentFiber._debugSource.fileName) {
-            filePath = currentFiber._debugSource.fileName;
-          }
+          const filePath = getDebugFileName(currentFiber);
 
           allComponents.push({
             name: componentName,
@@ -591,7 +709,10 @@ const traverseFiberTree = (fiber, maxDepth = MAX_FIBER_DEPTH) => {
         isInternal: comp.isInternal,
       });
     } else {
-      if (isUsedByInternalComponents(comp.name, internalComponents)) {
+      if (
+        isUsedByInternalComponents(comp.name, internalComponents) ||
+        isOwnedByProjectComponent(comp.fiber)
+      ) {
         filteredComponents.push({
           name: comp.name,
           fiber: comp.fiber,
@@ -627,9 +748,7 @@ const getComponentObj = (elem) => {
 
         if (components.length > 0) {
           const firstComponent = components[0];
-          const uid =
-            firstComponent.fiber._debugID ||
-            `${firstComponent.fiber.index || ''}${firstComponent.fiber.key || ''}`;
+          const uid = getFiberUid(firstComponent.fiber);
           const reversedHierarchy = components.reverse().map((c) => c.name);
           return { name: firstComponent.name, uid, hierarchy: reversedHierarchy };
         }
@@ -1194,7 +1313,7 @@ export const enableXrayReact = () => {
 
   if (!projectRoot) {
     if (typeof window !== 'undefined' && window.__XRAY_REACT_PROJECT_ROOT__) {
-      projectRoot = normalizePath(window.__XRAY_REACT_PROJECT_ROOT__);
+      setProjectRoot(window.__XRAY_REACT_PROJECT_ROOT__);
     } else {
       setTimeout(() => {
         detectProjectRootFromDOM();
